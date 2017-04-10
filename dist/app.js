@@ -26,22 +26,30 @@
     var DIRT = 1 << 2;
     var TREE = 1 << 3;
     var ROCK = 1 << 4;
+    var GROWTH = 1 << 5;
+    var WATER = 1 << 6;
 
     var BUILDABLE = GRASS | DIRT;
-    var PLANT = GRASS | TREE;
+    var WATER_FLOWS = GRASS | DIRT;
+    var PLANT = GRASS | TREE | GROWTH;
+    var FOREST = TREE | GROWTH;
 
     function cellColor(cellType) {
       switch (cellType) {
         case GRASS:
           return '#4C7426';
         case CIV:
-          return '#1F3B54';
+          return '#441111';
         case DIRT:
           return '#81762A';
         case TREE:
           return '#214300';
         case ROCK:
           return '#586776';
+        case GROWTH:
+          return '#2A5105';
+        case WATER:
+          return '#006666';
         default:
           console.log(cellType);
           return '#FF0000';
@@ -59,13 +67,13 @@
 
     var lastTime = null;
 
-    var GRID_WIDTH = 50;
-    var GRID_HEIGHT = 50;
+    var GRID_WIDTH = 100;
+    var GRID_HEIGHT = 100;
 
     var grid = void 0;
 
     var turnTimer = 0;
-    var TIMER_LENGTH = 1.0;
+    var TIMER_LENGTH = 0.1;
 
     var paused = false;
 
@@ -92,10 +100,10 @@
       grid[25][25] = CIV;
       grid[25][26] = CIV;
 
-      // grid[21][33] = CIV;
-      // grid[22][33] = CIV;
+      grid[21][33] = CIV;
+      grid[22][33] = CIV;
 
-      //  grid[3][16] = CIV;
+      grid[3][16] = CIV;
 
       grid[13][40] = TREE;
       grid[14][40] = TREE;
@@ -106,6 +114,18 @@
       grid[13][42] = TREE;
       grid[14][42] = TREE;
       grid[15][42] = TREE;
+
+      grid[23][17] = TREE;
+      grid[24][17] = TREE;
+      grid[25][17] = TREE;
+      grid[23][18] = TREE;
+      grid[24][18] = TREE;
+      grid[25][18] = TREE;
+      grid[23][19] = TREE;
+      grid[24][19] = TREE;
+      grid[25][19] = TREE;
+
+      //grid[0][0] = WATER;
 
       requestAnimationFrame(update);
     }
@@ -148,33 +168,50 @@
     // }
 
     function resolveBlock(x, y) {
+
+      if (grid[x][y] & WATER_FLOWS) {
+        if (northwestNode(x, y) === WATER || !(northNode(x, y) & WATER_FLOWS) && westNode(x, y) === WATER || !(westNode(x, y) & WATER_FLOWS) && northNode(x, y) === WATER) {
+          return WATER;
+        }
+      }
+
       if (grid[x][y] & BUILDABLE) {
         //  console.log("build");
-        if (hasNeighbor(x, y, GRASS) && oneAxis(x, y, CIV)) {
+        if (allNeighborCount(x, y, PLANT) >= 3 && oneAxis(x, y, CIV)) {
           return CIV;
         }
       }
 
       if (grid[x][y] === DIRT) {
-        if (hasDirectNeighbor(x, y, TREE) || allNeighborCount(x, y, PLANT) >= 5) {
+        if (hasNeighbor(x, y, WATER), allNeighborCount(x, y, PLANT) > allNeighborCount(x, y, CIV)) {
           return GRASS;
         }
       }
 
       if (grid[x][y] === GRASS) {
-        if (allNeighborCount(x, y, TREE) >= 3) {
-          return TREE;
+        if (allNeighborCount(x, y, TREE) >= 3 && !hasNeighbor(x, y, CIV)) {
+          return GROWTH;
         }
+        if (allNeighborCount(x, y, PLANT) < allNeighborCount(x, y, CIV)) {
+          return DIRT;
+        }
+
+        // if (allNeighborCount(x, y, PLANT) === 8) {
+        //   return GROWTH;
+        // }
       }
 
       if (grid[x][y] === ROCK) {
         if (hasDirectNeighbor(x, y, TREE)) {
           return DIRT;
         }
+        if (allNeighborCount(x, y, WATER) >= 3) {
+          return DIRT;
+        }
       }
 
       if (grid[x][y] === CIV) {
-        if (isAllDirectNeighbors(x, y, CIV) || allNeighborCount(x, y, CIV) > allNeighborCount(x, y, PLANT)) {
+        if (isAllDirectNeighbors(x, y, CIV) || allNeighborCount(x, y, CIV) > allNeighborCount(x, y, GRASS)) {
           return ROCK;
         }
         if (!hasDirectNeighbor(x, y, CIV)) {
@@ -183,8 +220,27 @@
       }
 
       if (grid[x][y] === TREE) {
+        // if (hasDirectNeighbor(x, y, CIV)) {
+        //   return CIV;
+        // }
         if (hasDirectNeighbor(x, y, CIV)) {
           return DIRT;
+        }
+      }
+
+      if (grid[x][y] === GROWTH) {
+        return TREE;
+      }
+
+      if (grid[x][y] === WATER) {
+        if (hasDirectNeighbor(x, y, CIV)) {
+          return GRASS;
+        }
+        if (hasDirectNeighbor(x, y, FOREST) && allNeighborCount(x, y, WATER) >= 3) {
+          return GROWTH;
+        }
+        if (allNeighborCount(x, y, TREE) > 4 && !hasNeighbor(x, y, WATER)) {
+          return GRASS;
         }
       }
 
