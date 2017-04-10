@@ -17,8 +17,34 @@
 
     window.onload = init;
 
-    var canvasWidth = 900;
+    var canvasWidth = 1300;
     var canvasHeight = 900;
+
+    var GRID_WIDTH = 50;
+    var GRID_HEIGHT = 50;
+
+    var CELL_SIZE = canvasHeight / GRID_HEIGHT;
+    var SIDEBAR_X = canvasHeight;
+    var SIDEBAR_WIDTH = canvasWidth - SIDEBAR_X;
+    var SIDEBAR_MARGIN = Math.floor(SIDEBAR_WIDTH * 0.05);
+    var SIDEBAR_INNER_WIDTH = SIDEBAR_WIDTH - SIDEBAR_MARGIN * 2;
+    var SIDEBAR_EFFECTIVE_WIDTH = SIDEBAR_INNER_WIDTH - SIDEBAR_MARGIN * 2;
+
+    var BUTTON_X = SIDEBAR_X + SIDEBAR_MARGIN * 2;
+
+    var TIME_BUTTON_COUNT = 4;
+    var TIME_BUTTON_SIZE = (SIDEBAR_EFFECTIVE_WIDTH - (TIME_BUTTON_COUNT - 1) * SIDEBAR_MARGIN) / TIME_BUTTON_COUNT;
+    var TIME_BUTTON_Y = SIDEBAR_MARGIN * 2;
+
+    var CELL_BUTTON_SIZE = (SIDEBAR_EFFECTIVE_WIDTH - 2 * SIDEBAR_MARGIN) / 3;
+    var CELL_BUTTON_ROW1_Y = TIME_BUTTON_Y + TIME_BUTTON_SIZE + SIDEBAR_MARGIN;
+    var CELL_BUTTON_ROW2_Y = CELL_BUTTON_ROW1_Y + CELL_BUTTON_SIZE + SIDEBAR_MARGIN;
+
+    var BRUSH_BUTTON_Y = CELL_BUTTON_ROW2_Y + CELL_BUTTON_SIZE + SIDEBAR_MARGIN;
+
+    var BUTTON_COLOR = '#444444';
+    var BUTTON_HOVER_COLOR = '#555555';
+    var BUTTON_SELECTED_COLOR = '#666600';
 
     // Cell types
     var GRASS = 1 << 0;
@@ -56,32 +82,39 @@
       }
     }
 
-    var palette = {
-      primary: ['#4C7426', '#8CA376', '#688949', '#2A5105', '#214300'],
-      secondary: ['#1F3B54', '#586776', '#384E63', '#08223A', '#021A30'],
-      tertiary: ['#81762A', '#B6B084', '#989051', '#5A5006', '#4B4100']
-    };
-
     var canvas = void 0;
     var ctx = void 0;
 
     var lastTime = null;
 
-    var GRID_WIDTH = 100;
-    var GRID_HEIGHT = 100;
-
     var grid = void 0;
 
     var turnTimer = 0;
-    var TIMER_LENGTH = 0.1;
+
+    var speedSelected = 0;
+    var speeds = [1.0, 0.7, 0.3, 0.1];
+
+    var cellSelected = 0;
+    var cells = [ROCK, DIRT, GRASS, CIV, TREE, WATER];
+
+    var brushSelected = 0;
 
     var paused = false;
+
+    var mouseLoc = { x: 0, y: 0 };
 
     function init() {
       canvas = document.querySelector('canvas');
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
       ctx = canvas.getContext('2d');
+
+      canvas.addEventListener('mousemove', function (event) {
+        var rect = canvas.getBoundingClientRect();
+        mouseLoc.x = event.clientX - rect.left;
+        mouseLoc.y = event.clientY - rect.top;
+        console.log(mouseLoc);
+      }, false);
 
       //canvas.addEventListener("mousedown", onClick);
       // window.onkeyup = function() {
@@ -142,8 +175,8 @@
 
     function tick(dt) {
       if (!paused) turnTimer += dt;
-      if (turnTimer >= TIMER_LENGTH) {
-        turnTimer -= TIMER_LENGTH;
+      if (turnTimer >= speeds[speedSelected]) {
+        turnTimer -= speeds[speedSelected];
         turn();
       }
     }
@@ -176,7 +209,6 @@
       }
 
       if (grid[x][y] & BUILDABLE) {
-        //  console.log("build");
         if (allNeighborCount(x, y, PLANT) >= 3 && oneAxis(x, y, CIV)) {
           return CIV;
         }
@@ -195,10 +227,6 @@
         if (allNeighborCount(x, y, PLANT) < allNeighborCount(x, y, CIV)) {
           return DIRT;
         }
-
-        // if (allNeighborCount(x, y, PLANT) === 8) {
-        //   return GROWTH;
-        // }
       }
 
       if (grid[x][y] === ROCK) {
@@ -220,9 +248,6 @@
       }
 
       if (grid[x][y] === TREE) {
-        // if (hasDirectNeighbor(x, y, CIV)) {
-        //   return CIV;
-        // }
         if (hasDirectNeighbor(x, y, CIV)) {
           return DIRT;
         }
@@ -323,8 +348,43 @@
 
     function render() {
       //  clear();
-
+      drawSidebar();
       drawGrid();
+    }
+
+    function drawSidebar() {
+      ctx.save();
+      ctx.fillStyle = '#333333';
+      ctx.fillRect(SIDEBAR_X + SIDEBAR_MARGIN, SIDEBAR_MARGIN, SIDEBAR_INNER_WIDTH, canvasHeight - SIDEBAR_MARGIN * 2);
+
+      drawButton(BUTTON_X, TIME_BUTTON_Y, TIME_BUTTON_SIZE, speedSelected === 0);
+      drawButton(BUTTON_X + TIME_BUTTON_SIZE + SIDEBAR_MARGIN, TIME_BUTTON_Y, TIME_BUTTON_SIZE, speedSelected === 1);
+      drawButton(BUTTON_X + (TIME_BUTTON_SIZE + SIDEBAR_MARGIN) * 2, TIME_BUTTON_Y, TIME_BUTTON_SIZE, speedSelected === 2);
+      drawButton(BUTTON_X + (TIME_BUTTON_SIZE + SIDEBAR_MARGIN) * 3, TIME_BUTTON_Y, TIME_BUTTON_SIZE, speedSelected === 3);
+      drawCellButton(BUTTON_X, CELL_BUTTON_ROW1_Y, 0);
+      drawCellButton(BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN, CELL_BUTTON_ROW1_Y, 1);
+      drawCellButton(BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2, CELL_BUTTON_ROW1_Y, 2);
+      drawCellButton(BUTTON_X, CELL_BUTTON_ROW2_Y, 3);
+      drawCellButton(BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN, CELL_BUTTON_ROW2_Y, 4);
+      drawCellButton(BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2, CELL_BUTTON_ROW2_Y, 5);
+      drawButton(BUTTON_X, BRUSH_BUTTON_Y, CELL_BUTTON_SIZE, brushSelected === 0);
+      drawButton(BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN, BRUSH_BUTTON_Y, CELL_BUTTON_SIZE, brushSelected === 1);
+      drawButton(BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2, BRUSH_BUTTON_Y, CELL_BUTTON_SIZE, brushSelected === 2);
+      ctx.restore();
+    }
+
+    function drawButton(x, y, size, selected) {
+      ctx.fillStyle = selected ? BUTTON_SELECTED_COLOR : mouseLoc.x > x && mouseLoc.x < x + size && mouseLoc.y > y && mouseLoc.y < y + size ? BUTTON_HOVER_COLOR : BUTTON_COLOR;
+      ctx.fillRect(x, y, size, size);
+    }
+
+    var CELL_ICON_MARGIN = Math.floor(CELL_BUTTON_SIZE * 0.15);
+    var CELL_ICON_SIZE = CELL_BUTTON_SIZE - CELL_ICON_MARGIN * 2;
+
+    function drawCellButton(x, y, index) {
+      drawButton(x, y, CELL_BUTTON_SIZE, cellSelected === index);
+      ctx.fillStyle = cellColor(cells[index]);
+      ctx.fillRect(x + CELL_ICON_MARGIN, y + CELL_ICON_MARGIN, CELL_ICON_SIZE, CELL_ICON_SIZE);
     }
 
     function drawGrid() {
@@ -339,13 +399,6 @@
     }
 
     function drawBlock(x, y) {
-      ctx.fillRect(x / GRID_WIDTH * canvasWidth, y / GRID_HEIGHT * canvasHeight, canvasWidth / GRID_WIDTH, canvasHeight / GRID_HEIGHT);
+      ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
     }
-
-    // function clear() {
-    //   ctx.save();
-    //   ctx.fillStyle = paused ? palette.secondary[3] :  palette.primary[2];
-    //   ctx.fillRect(0,0,canvasWidth,canvasHeight);
-    //   ctx.restore();
-    // }
   }, {}] }, {}, [1]);
