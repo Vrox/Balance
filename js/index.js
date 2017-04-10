@@ -5,8 +5,8 @@ window.onload = init;
 const canvasWidth = 1300;
 const canvasHeight = 900;
 
-let GRID_WIDTH = 50;
-let GRID_HEIGHT = 50;
+let GRID_WIDTH = 100;
+let GRID_HEIGHT = 100;
 
 const CELL_SIZE = canvasHeight/GRID_HEIGHT;
 const SIDEBAR_X = canvasHeight;
@@ -25,7 +25,13 @@ const CELL_BUTTON_SIZE = (SIDEBAR_EFFECTIVE_WIDTH - 2 * SIDEBAR_MARGIN) / 3;
 const CELL_BUTTON_ROW1_Y = TIME_BUTTON_Y + TIME_BUTTON_SIZE + SIDEBAR_MARGIN;
 const CELL_BUTTON_ROW2_Y = CELL_BUTTON_ROW1_Y + CELL_BUTTON_SIZE + SIDEBAR_MARGIN;
 
-const BRUSH_BUTTON_Y = CELL_BUTTON_ROW2_Y + CELL_BUTTON_SIZE + SIDEBAR_MARGIN;
+const CELL_ICON_MARGIN = Math.floor(CELL_BUTTON_SIZE * 0.15);
+const CELL_ICON_SIZE = CELL_BUTTON_SIZE - CELL_ICON_MARGIN * 2;
+
+const TIME_ICON_MARGIN = Math.floor(TIME_BUTTON_SIZE * 0.15);
+const TIME_ICON_SIZE = TIME_BUTTON_SIZE - TIME_ICON_MARGIN * 2;
+
+const BRUSH_BUTTON_Y = CELL_BUTTON_ROW2_Y + CELL_BUTTON_SIZE + SIDEBAR_MARGIN * 2;
 
 const BUTTON_COLOR = '#444444';
 const BUTTON_HOVER_COLOR = '#555555';
@@ -45,12 +51,160 @@ const WATER_FLOWS = GRASS | DIRT;
 const PLANT = GRASS | TREE | GROWTH;
 const FOREST = TREE | GROWTH;
 
+const brushes = [0, 5, 10];
+
+class SidebarButton {
+  constructor(x, y, size, drawIcon, onSelect, isSelected) {
+    this.x = x;
+    this.y = y;
+    this.size = size;
+    this.drawIcon = drawIcon;
+    this.onSelect = onSelect;
+    this.isSelected = isSelected;
+  }
+
+  draw() {
+    ctx.fillStyle = this.isSelected() ? BUTTON_SELECTED_COLOR :
+    (mouseLoc.x > this.x && mouseLoc.x < this.x + this.size && mouseLoc.y > this.y && mouseLoc.y < this.y + this.size) ?
+      BUTTON_HOVER_COLOR : BUTTON_COLOR;
+    ctx.fillRect(this.x, this.y, this.size, this.size);
+    this.drawIcon();
+  }
+
+  checkPress(mouseX, mouseY) {
+    if (mouseX > this.x && mouseX < this.x + this.size && mouseY > this.y && mouseY < this.y + this.size) {
+      this.onSelect();
+    }
+  }
+}
+
+function drawCellIcon(x, y, index) {
+  ctx.fillStyle = cellColor(cells[index]);
+  ctx.fillRect(x + CELL_ICON_MARGIN, y + CELL_ICON_MARGIN, CELL_ICON_SIZE, CELL_ICON_SIZE);
+}
+
+
+const sidebarButtons = [
+  new SidebarButton(
+    BUTTON_X,
+    TIME_BUTTON_Y,
+    TIME_BUTTON_SIZE,
+    () => { ctx.drawImage(timer0img, BUTTON_X + TIME_ICON_MARGIN, TIME_BUTTON_Y + TIME_ICON_MARGIN, TIME_ICON_SIZE, TIME_ICON_SIZE); },
+    () => { speedSelected = 0; },
+    () => { return speedSelected === 0; }
+  ),
+  new SidebarButton(
+    BUTTON_X + TIME_BUTTON_SIZE + SIDEBAR_MARGIN,
+    TIME_BUTTON_Y,
+    TIME_BUTTON_SIZE,
+    () => { ctx.drawImage(timer1img, BUTTON_X + TIME_BUTTON_SIZE + SIDEBAR_MARGIN + TIME_ICON_MARGIN, TIME_BUTTON_Y + TIME_ICON_MARGIN, TIME_ICON_SIZE, TIME_ICON_SIZE); },
+    () => { speedSelected = 1; },
+    () => { return speedSelected === 1; }
+  ),
+  new SidebarButton(
+    BUTTON_X + (TIME_BUTTON_SIZE + SIDEBAR_MARGIN) * 2,
+    TIME_BUTTON_Y,
+    TIME_BUTTON_SIZE,
+    () => { ctx.drawImage(timer2img, BUTTON_X + (TIME_BUTTON_SIZE + SIDEBAR_MARGIN) * 2 + TIME_ICON_MARGIN, TIME_BUTTON_Y + TIME_ICON_MARGIN, TIME_ICON_SIZE, TIME_ICON_SIZE); },
+    () => { speedSelected = 2; },
+    () => { return speedSelected === 2; }
+  ),
+  new SidebarButton(
+    BUTTON_X + (TIME_BUTTON_SIZE + SIDEBAR_MARGIN) * 3,
+    TIME_BUTTON_Y,
+    TIME_BUTTON_SIZE,
+    () => { ctx.drawImage(timer3img, BUTTON_X + (TIME_BUTTON_SIZE + SIDEBAR_MARGIN) * 3 + TIME_ICON_MARGIN, TIME_BUTTON_Y + TIME_ICON_MARGIN, TIME_ICON_SIZE, TIME_ICON_SIZE); },
+    () => { speedSelected = 3; },
+    () => { return speedSelected === 3; }
+  ),
+  new SidebarButton(
+    BUTTON_X,
+    CELL_BUTTON_ROW1_Y,
+    CELL_BUTTON_SIZE,
+    () => { drawCellIcon(BUTTON_X, CELL_BUTTON_ROW1_Y, 0); },
+    () => { cellSelected = 0; },
+    () => { return cellSelected === 0; }
+  ),
+  new SidebarButton(
+    BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN,
+    CELL_BUTTON_ROW1_Y,
+    CELL_BUTTON_SIZE,
+    () => { drawCellIcon(BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN, CELL_BUTTON_ROW1_Y, 1); },
+    () => { cellSelected = 1; },
+    () => { return cellSelected === 1; }
+  ),
+  new SidebarButton(
+    BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2,
+    CELL_BUTTON_ROW1_Y,
+    CELL_BUTTON_SIZE,
+    () => { drawCellIcon(BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2,  CELL_BUTTON_ROW1_Y, 2); },
+    () => { cellSelected = 2; },
+    () => { return cellSelected === 2; }
+  ),
+  new SidebarButton(
+    BUTTON_X,
+    CELL_BUTTON_ROW2_Y,
+    CELL_BUTTON_SIZE,
+    () => { drawCellIcon(BUTTON_X, CELL_BUTTON_ROW2_Y, 3); },
+    () => { cellSelected = 3; },
+    () => { return cellSelected === 3; }
+  ),
+  new SidebarButton(
+    BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN,
+    CELL_BUTTON_ROW2_Y,
+    CELL_BUTTON_SIZE,
+    () => { drawCellIcon(BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN, CELL_BUTTON_ROW2_Y, 4); },
+    () => { cellSelected = 4; },
+    () => { return cellSelected === 4; }
+  ),
+  new SidebarButton(
+    BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2,
+    CELL_BUTTON_ROW2_Y,
+    CELL_BUTTON_SIZE,
+    () => { drawCellIcon(BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2, CELL_BUTTON_ROW2_Y, 5); },
+    () => { cellSelected = 5; },
+    () => { return cellSelected === 5; }
+  ),
+  new SidebarButton(
+    BUTTON_X,
+    CELL_BUTTON_ROW2_Y,
+    CELL_BUTTON_SIZE,
+    () => { drawCellIcon(BUTTON_X, CELL_BUTTON_ROW2_Y, 3); },
+    () => { cellSelected = 3; },
+    () => { return cellSelected === 3; }
+  ),
+  new SidebarButton(
+    BUTTON_X,
+    BRUSH_BUTTON_Y,
+    CELL_BUTTON_SIZE,
+    () => { ctx.drawImage(brush0img, BUTTON_X + CELL_ICON_MARGIN, BRUSH_BUTTON_Y + CELL_ICON_MARGIN, CELL_ICON_SIZE, CELL_ICON_SIZE); },
+    () => { brushSelected = 0; },
+    () => { return brushSelected === 0; }
+  ),
+  new SidebarButton(
+    BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN,
+    BRUSH_BUTTON_Y,
+    CELL_BUTTON_SIZE,
+    () => { ctx.drawImage(brush1img, BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN + CELL_ICON_MARGIN, BRUSH_BUTTON_Y + CELL_ICON_MARGIN, CELL_ICON_SIZE, CELL_ICON_SIZE); },
+    () => { brushSelected = 1; },
+    () => { return brushSelected === 1; }
+  ),
+  new SidebarButton(
+    BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2,
+    BRUSH_BUTTON_Y,
+    CELL_BUTTON_SIZE,
+    () => { ctx.drawImage(brush2img, BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2 + CELL_ICON_MARGIN, BRUSH_BUTTON_Y + CELL_ICON_MARGIN, CELL_ICON_SIZE, CELL_ICON_SIZE); },
+    () => { brushSelected = 2; },
+    () => { return brushSelected === 2; }
+  ),
+];
+
 function cellColor(cellType) {
   switch (cellType) {
   case GRASS:
     return '#4C7426';
   case CIV:
-    return '#441111';
+    return '#AAAAAA';
   case DIRT:
     return '#81762A';
   case TREE:
@@ -76,19 +230,63 @@ let grid;
 
 let turnTimer = 0;
 
-let speedSelected = 0;
-const speeds = [1.0, 0.7, 0.3, 0.1];
+let speedSelected = 1;
+const speeds = [1.0, 0.5, 0.2, 0.1];
 
 let cellSelected = 0;
 const cells = [ROCK, DIRT, GRASS, CIV, TREE, WATER];
 
-let brushSelected = 0;
+let brushSelected = 1;
 
 let paused = false;
 
 let mouseLoc = {x: 0, y:0};
 
+let mouseDownTracker = false;
+
+function paint() {
+  const gridX = Math.floor(mouseLoc.x / CELL_SIZE);
+  const gridY = Math.floor(mouseLoc.y / CELL_SIZE);
+
+  const brushSize = brushes[brushSelected];
+
+  for(let bx = gridX - brushSize, bxMax = gridX + brushSize; bx <= bxMax; bx++) {
+    for(let by = gridY - brushSize, byMax = gridY + brushSize; by <= byMax; by++) {
+      const dx = Math.abs(gridX - bx);
+      const dy = Math.abs(gridY - by);
+      if (dx * dx + dy * dy <= brushSize * brushSize) {
+        paintCell(bx, by);
+      }
+    }
+  }
+}
+
+function paintCell(gridX, gridY) {
+  if (gridX < 0 || gridY < 0 || gridX >= GRID_WIDTH || gridY >= GRID_HEIGHT) return;
+  grid[gridX][gridY] = cells[cellSelected];
+}
+
+let brush0img;
+let brush1img;
+let brush2img;
+
+let timer0img;
+let timer1img;
+let timer2img;
+let timer3img;
+
 function init() {
+
+  brush0img = document.getElementById('brush0');
+  brush1img = document.getElementById('brush1');
+  brush2img = document.getElementById('brush2');
+
+  timer0img = document.getElementById('timer0');
+  timer1img = document.getElementById('timer1');
+  timer2img = document.getElementById('timer2');
+  timer3img = document.getElementById('timer3');
+
+
   canvas = document.querySelector('canvas');
   canvas.width = canvasWidth;
   canvas.height = canvasHeight;
@@ -98,14 +296,21 @@ function init() {
     const rect = canvas.getBoundingClientRect();
     mouseLoc.x = event.clientX - rect.left;
     mouseLoc.y = event.clientY - rect.top;
-    console.log(mouseLoc)
+    if (mouseDownTracker) {
+      paint();
+    }
   }, false);
 
-  //canvas.addEventListener("mousedown", onClick);
-  // window.onkeyup = function() {
-  //   paused = !paused;
-  //   document.getElementById('coolBody').style.backgroundColor = paused ? palette.tertiary[4] : palette.secondary[4];
-  // };
+  canvas.addEventListener("mousedown", () => {
+    mouseDownTracker = true;
+    paint();
+  });
+  canvas.addEventListener("mouseup", () => {
+    for (let i = 0; i < sidebarButtons.length; i++) {
+      sidebarButtons[i].checkPress(mouseLoc.x, mouseLoc.y);
+    }
+    mouseDownTracker = false;
+  });
 
   grid = [GRID_WIDTH];
   for (var x = 0; x < GRID_WIDTH; x++) {
@@ -123,15 +328,15 @@ function init() {
 
   grid[3][16] = CIV;
 
-  grid[13][40] = TREE;
-  grid[14][40] = TREE;
-  grid[15][40] = TREE;
-  grid[13][41] = TREE;
-  grid[14][41] = TREE;
-  grid[15][41] = TREE;
-  grid[13][42] = TREE;
-  grid[14][42] = TREE;
-  grid[15][42] = TREE;
+  grid[73][40] = TREE;
+  grid[74][40] = TREE;
+  grid[75][40] = TREE;
+  grid[73][41] = TREE;
+  grid[74][41] = TREE;
+  grid[75][41] = TREE;
+  grid[73][42] = TREE;
+  grid[74][42] = TREE;
+  grid[75][42] = TREE;
 
   grid[23][17] = TREE;
   grid[24][17] = TREE;
@@ -143,7 +348,7 @@ function init() {
   grid[24][19] = TREE;
   grid[25][19] = TREE;
 
-  //grid[0][0] = WATER;
+//  grid[0][0] = WATER;
 
   requestAnimationFrame(update);
 }
@@ -176,15 +381,7 @@ function turn() {
     }
   }
   grid = gridCopy;
-//  console.log("turn")
 }
-
-// function onClick(event) {
-//   var rect = canvas.getBoundingClientRect();
-//   var x = Math.floor((event.clientX - rect.left) / canvasWidth * GRID_WIDTH);
-//   var y = Math.floor((event.clientY - rect.top) / canvasHeight * GRID_HEIGHT);
-//   grid[x][y] = !grid[x][y];
-// }
 
 function resolveBlock(x, y) {
 
@@ -357,7 +554,6 @@ function southeastNode(x, y) {
 }
 
 function render() {
-//  clear();
   drawSidebar();
   drawGrid();
 }
@@ -367,36 +563,11 @@ function drawSidebar() {
   ctx.fillStyle = '#333333';
   ctx.fillRect(SIDEBAR_X + SIDEBAR_MARGIN, SIDEBAR_MARGIN, SIDEBAR_INNER_WIDTH, canvasHeight - SIDEBAR_MARGIN * 2);
 
-  drawButton(BUTTON_X, TIME_BUTTON_Y, TIME_BUTTON_SIZE, speedSelected === 0);
-  drawButton(BUTTON_X + TIME_BUTTON_SIZE + SIDEBAR_MARGIN, TIME_BUTTON_Y, TIME_BUTTON_SIZE, speedSelected === 1);
-  drawButton(BUTTON_X + (TIME_BUTTON_SIZE + SIDEBAR_MARGIN) * 2, TIME_BUTTON_Y, TIME_BUTTON_SIZE, speedSelected === 2);
-  drawButton(BUTTON_X + (TIME_BUTTON_SIZE + SIDEBAR_MARGIN) * 3, TIME_BUTTON_Y, TIME_BUTTON_SIZE, speedSelected === 3);
-  drawCellButton(BUTTON_X, CELL_BUTTON_ROW1_Y, 0);
-  drawCellButton(BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN, CELL_BUTTON_ROW1_Y, 1);
-  drawCellButton(BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2, CELL_BUTTON_ROW1_Y, 2);
-  drawCellButton(BUTTON_X, CELL_BUTTON_ROW2_Y, 3);
-  drawCellButton(BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN, CELL_BUTTON_ROW2_Y, 4);
-  drawCellButton(BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2, CELL_BUTTON_ROW2_Y, 5);
-  drawButton(BUTTON_X, BRUSH_BUTTON_Y, CELL_BUTTON_SIZE, brushSelected === 0);
-  drawButton(BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN, BRUSH_BUTTON_Y, CELL_BUTTON_SIZE, brushSelected === 1);
-  drawButton(BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2, BRUSH_BUTTON_Y, CELL_BUTTON_SIZE, brushSelected === 2);
+  for(let i = 0; i < sidebarButtons.length; i++) {
+    sidebarButtons[i].draw();
+  }
+
   ctx.restore();
-}
-
-function drawButton(x, y, size, selected) {
-  ctx.fillStyle = selected ? BUTTON_SELECTED_COLOR :
-  (mouseLoc.x > x && mouseLoc.x < x + size && mouseLoc.y > y && mouseLoc.y < y + size) ?
-    BUTTON_HOVER_COLOR : BUTTON_COLOR;
-  ctx.fillRect(x, y, size, size);
-}
-
-const CELL_ICON_MARGIN = Math.floor(CELL_BUTTON_SIZE * 0.15);
-const CELL_ICON_SIZE = CELL_BUTTON_SIZE - CELL_ICON_MARGIN * 2;
-
-function drawCellButton(x, y, index) {
-  drawButton(x, y, CELL_BUTTON_SIZE, cellSelected === index);
-  ctx.fillStyle = cellColor(cells[index]);
-  ctx.fillRect(x + CELL_ICON_MARGIN, y + CELL_ICON_MARGIN, CELL_ICON_SIZE, CELL_ICON_SIZE);
 }
 
 function drawGrid() {
