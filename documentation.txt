@@ -1,0 +1,59 @@
+Project 1 Documentation
+Benjamin Gilchrist
+
+For this project I simulated a world using cellular automata, with several complex
+systems interacting with each other. I put an emphasis on the natural world, especially
+on living things.
+
+The primary cell types involved are:
+Grass (Light Green)
+Forest (Dark Green)
+Civilization (Gold)
+
+Additional types are:
+Dirt (Light Brown)
+Rock (Grey)
+Fauna (Dark Brown)
+Water (Blue)
+Wall (Black)
+Growth (Mid Green)
+
+While the exact rules which govern the cells' interactions are fairly complex,
+the basic interactions are meant to go as follows:
+
+Grass and Forest spread across dirt and stone and are self-sustainable.
+If undeterred, they will cover the entire map. These exhibit unrelenting growth.
+
+Civilization will spread across Grass and Forest, but turn nearby Grass
+into Dirt and turn into Rock when there is not enough plant life near them to survive.
+This causes them to leave Rocks in their wake in regular patterns, unlike the
+organic appearance of everything else. This cell type is destructive and not self-sustainable.
+
+Water will flow down and to the right and will not wrap around the screen, making
+it the only cell type to prefer a certain direction over another, allowing
+creeks or bays to be created. Since water is a source of life, it turns
+dirt into grass, and when it comes in contact with the edge of a growing forest
+(where the Growth cells are spawned, specifically), can spawn Fauna.
+
+While Grass/Forest is meant to symbolize growth and Civilization is self-destructive,
+Fauna is meant to be represent stability. It is still vulnerable to Civilization's
+spread, but is self-sustaining and can stay present indefinitely in a field, body
+of water, or forest. It additionally suspends the spread of Forests.
+Fauna cells live and die rapidly as well, giving a sense of constant motion.
+
+Wall cells do not have a symbolic representation, and have been included only for
+fun. They will never change, and can be used to section areas off. They were given
+a strong color of absolute black to show that it is a sort of meta cell type.
+
+UI was made minimal with no typography to go along with the abstract minimal visual
+style which cellular automata already possesses by nature. While without this guide
+it may be initially unclear what the cell types are, I'm hoping they are intuitive
+enough to prevent too much confusion.
+
+The initial state of the cell map was chosen because when uninterrupted, it immediately
+shows viewers the destructive nature of Civilization cells, as well as the growth
+of Forest cells. It also immediately leaves very inorganic patterns of rock behind
+the Civilization, hopefully hinting at the nature of the cells without needing words.
+
+A light grey background was chosen to keep the spotlight on the grid itself, while
+giving some contrast to the Wall cells.

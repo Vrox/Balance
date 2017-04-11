@@ -38,18 +38,23 @@ const BUTTON_HOVER_COLOR = '#555555';
 const BUTTON_SELECTED_COLOR = '#666600';
 
 // Cell types
-const GRASS = 1 << 0;
-const CIV = 1 << 1;
-const DIRT = 1 << 2;
-const TREE = 1 << 3;
-const ROCK = 1 << 4;
-const GROWTH = 1 << 5;
-const WATER = 1 << 6;
+const GRASS = 1 << 0; // 1
+const CIV = 1 << 1; // 2
+const DIRT = 1 << 2; // 4
+const TREE = 1 << 3; // 8
+const ROCK = 1 << 4; // 16
+const GROWTH = 1 << 5; // 32
+const WATER = 1 << 6; // 64
+const FAUNA = 1 << 7; // 128
+const WALL = 1 << 8; // 256
 
 const BUILDABLE = GRASS | DIRT;
 const WATER_FLOWS = GRASS | DIRT;
 const PLANT = GRASS | TREE | GROWTH;
 const FOREST = TREE | GROWTH;
+const FAUNA_ROAMS = GRASS | TREE | GROWTH | WATER;
+const EATS = CIV | FAUNA;
+const BAREN = ROCK | WALL;
 
 const brushes = [0, 5, 10];
 
@@ -204,7 +209,7 @@ function cellColor(cellType) {
   case GRASS:
     return '#4C7426';
   case CIV:
-    return '#AAAAAA';
+    return '#AAAA11';
   case DIRT:
     return '#81762A';
   case TREE:
@@ -215,6 +220,10 @@ function cellColor(cellType) {
     return '#2A5105';
   case WATER:
     return '#006666';
+  case FAUNA:
+    return '#5e4b00';
+  case WALL:
+    return '#000000';
   default:
     console.log(cellType);
     return '#FF0000';
@@ -234,7 +243,7 @@ let speedSelected = 1;
 const speeds = [1.0, 0.5, 0.2, 0.1];
 
 let cellSelected = 0;
-const cells = [ROCK, DIRT, GRASS, CIV, TREE, WATER];
+const cells = [TREE, GRASS, CIV, DIRT, WATER, WALL];
 
 let brushSelected = 1;
 
@@ -386,21 +395,30 @@ function turn() {
 function resolveBlock(x, y) {
 
   if (grid[x][y] & WATER_FLOWS) {
-    if (northwestNode(x, y) === WATER ||
-    (!(northNode(x, y) & WATER_FLOWS) && westNode(x, y) === WATER) ||
-    (!(westNode(x, y) & WATER_FLOWS) && northNode(x, y) === WATER)) {
+    if (((x !== 0 && y !== 0) && northwestNode(x, y) === WATER) ||
+    (x !==0 && !(northNode(x, y) & WATER_FLOWS) && westNode(x, y) === WATER) ||
+    (y !== 0 && !(westNode(x, y) & WATER_FLOWS) && northNode(x, y) === WATER)) {
       return WATER;
     }
   }
 
   if (grid[x][y] & BUILDABLE) {
-    if (allNeighborCount(x, y, PLANT) >= 3 && oneAxis(x, y, CIV)) {
+    if ((allNeighborCount(x, y, TREE | GRASS | FAUNA) >= 3 || hasNeighbor(x, y, TREE)) && oneAxis(x, y, CIV)) {
       return CIV;
     }
   }
 
+  if (grid[x][y] & FAUNA_ROAMS) {
+    if (!hasNeighbor(x, y, CIV) && allNeighborCount(x, y, BAREN) <= 2 && hasDiagnalNeighbor(x, y, FAUNA) && !hasDirectNeighbor(x,y, FAUNA)) {
+      return FAUNA;
+    }
+  }
+
   if (grid[x][y] === DIRT) {
-    if (hasNeighbor(x, y, WATER), allNeighborCount(x, y, PLANT) > allNeighborCount(x, y, CIV)) {
+    if (allNeighborCount(x, y, CIV) >= 4) {
+      return ROCK;
+    }
+    if (hasNeighbor(x, y, WATER) || allNeighborCount(x, y, PLANT) > allNeighborCount(x, y, CIV) + 2) {
       return GRASS;
     }
   }
@@ -409,23 +427,23 @@ function resolveBlock(x, y) {
     if (allNeighborCount(x, y, TREE) >= 3 && !hasNeighbor(x, y, CIV)) {
       return GROWTH;
     }
-    if (allNeighborCount(x, y, PLANT) < allNeighborCount(x, y, CIV)) {
+    if (allNeighborCount(x, y, PLANT) < allNeighborCount(x, y, EATS | BAREN) + 1) {
       return DIRT;
     }
   }
 
   if (grid[x][y] === ROCK) {
-    if (hasDirectNeighbor(x, y, TREE)) {
+    if (!hasNeighbor(x, y, CIV) && allNeighborCount(x, y, TREE | FAUNA) >= 2 || allNeighborCount(x, y, PLANT | FAUNA) >= 4) {
       return DIRT;
     }
-    if (allNeighborCount(x, y, WATER) >= 3) {
+    if (allNeighborCount(x, y, WATER) >= 4) {
       return DIRT;
     }
   }
 
   if (grid[x][y] === CIV) {
     if (isAllDirectNeighbors(x, y, CIV) ||
-    allNeighborCount(x, y, CIV) > allNeighborCount(x, y, GRASS)) {
+      allNeighborCount(x, y, CIV) > allNeighborCount(x, y, GRASS)) {
       return ROCK;
     }
     if (!hasDirectNeighbor(x, y, CIV)) {
@@ -440,11 +458,26 @@ function resolveBlock(x, y) {
   }
 
   if (grid[x][y] === GROWTH) {
+    if (allNeighborCount(x, y, GROWTH) === 2 && hasNeighbor(x, y, WATER)) {
+      return FAUNA;
+    }
     return TREE;
   }
 
+  if (grid[x][y] === FAUNA) {
+    if (allNeighborCount(x, y, CIV) >= 2) {
+      return CIV;
+    }
+    if (hasNeighbor(x, y, CIV)) {
+      return DIRT;
+    }
+    if (allNeighborCount(x, y, EATS) > allNeighborCount(x, y, PLANT)) {
+      return GRASS;
+    }
+  }
+
   if (grid[x][y] === WATER) {
-    if (hasDirectNeighbor(x, y, CIV)) {
+    if (hasNeighbor(x, y, CIV)) {
       return GRASS;
     }
     if (hasDirectNeighbor(x, y, FOREST) && allNeighborCount(x, y, WATER) >= 3) {
@@ -463,6 +496,13 @@ function hasDirectNeighbor(x, y, flag) {
     eastNode(x,y) & flag ||
     northNode(x,y) & flag ||
     southNode(x,y) & flag;
+}
+
+function hasDiagnalNeighbor(x, y, flag) {
+  return northwestNode(x,y) & flag ||
+    northeastNode(x,y) & flag ||
+    southwestNode(x,y) & flag ||
+    southeastNode(x,y) & flag;
 }
 
 function hasNeighbor(x, y, flag) {

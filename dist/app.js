@@ -57,18 +57,23 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     var BUTTON_SELECTED_COLOR = '#666600';
 
     // Cell types
-    var GRASS = 1 << 0;
-    var CIV = 1 << 1;
-    var DIRT = 1 << 2;
-    var TREE = 1 << 3;
-    var ROCK = 1 << 4;
-    var GROWTH = 1 << 5;
-    var WATER = 1 << 6;
+    var GRASS = 1 << 0; // 1
+    var CIV = 1 << 1; // 2
+    var DIRT = 1 << 2; // 4
+    var TREE = 1 << 3; // 8
+    var ROCK = 1 << 4; // 16
+    var GROWTH = 1 << 5; // 32
+    var WATER = 1 << 6; // 64
+    var FAUNA = 1 << 7; // 128
+    var WALL = 1 << 8; // 256
 
     var BUILDABLE = GRASS | DIRT;
     var WATER_FLOWS = GRASS | DIRT;
     var PLANT = GRASS | TREE | GROWTH;
     var FOREST = TREE | GROWTH;
+    var FAUNA_ROAMS = GRASS | TREE | GROWTH | WATER;
+    var EATS = CIV | FAUNA;
+    var BAREN = ROCK | WALL;
 
     var brushes = [0, 5, 10];
 
@@ -199,7 +204,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         case GRASS:
           return '#4C7426';
         case CIV:
-          return '#AAAAAA';
+          return '#AAAA11';
         case DIRT:
           return '#81762A';
         case TREE:
@@ -210,6 +215,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
           return '#2A5105';
         case WATER:
           return '#006666';
+        case FAUNA:
+          return '#5e4b00';
+        case WALL:
+          return '#000000';
         default:
           console.log(cellType);
           return '#FF0000';
@@ -229,7 +238,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     var speeds = [1.0, 0.5, 0.2, 0.1];
 
     var cellSelected = 0;
-    var cells = [ROCK, DIRT, GRASS, CIV, TREE, WATER];
+    var cells = [TREE, GRASS, CIV, DIRT, WATER, WALL];
 
     var brushSelected = 1;
 
@@ -305,13 +314,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }
         mouseDownTracker = false;
       });
-      // 
-      // window.onkeyup = function() {
-      //   //paused = !paused;
-      //   console.log("save")
-      //   let img = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");  // here is the most important part because if you dont replace you will get a DOM 18 exception.
-      //   window.location.href=img; // it will save locally
-      // };
 
       grid = [GRID_WIDTH];
       for (var x = 0; x < GRID_WIDTH; x++) {
@@ -383,29 +385,31 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
       grid = gridCopy;
     }
 
-    // function onClick(event) {
-    //   var rect = canvas.getBoundingClientRect();
-    //   var x = Math.floor((event.clientX - rect.left) / canvasWidth * GRID_WIDTH);
-    //   var y = Math.floor((event.clientY - rect.top) / canvasHeight * GRID_HEIGHT);
-    //   grid[x][y] = !grid[x][y];
-    // }
-
     function resolveBlock(x, y) {
 
       if (grid[x][y] & WATER_FLOWS) {
-        if (northwestNode(x, y) === WATER || !(northNode(x, y) & WATER_FLOWS) && westNode(x, y) === WATER || !(westNode(x, y) & WATER_FLOWS) && northNode(x, y) === WATER) {
+        if (x !== 0 && y !== 0 && northwestNode(x, y) === WATER || x !== 0 && !(northNode(x, y) & WATER_FLOWS) && westNode(x, y) === WATER || y !== 0 && !(westNode(x, y) & WATER_FLOWS) && northNode(x, y) === WATER) {
           return WATER;
         }
       }
 
       if (grid[x][y] & BUILDABLE) {
-        if (allNeighborCount(x, y, PLANT) >= 3 && oneAxis(x, y, CIV)) {
+        if ((allNeighborCount(x, y, TREE | GRASS | FAUNA) >= 3 || hasNeighbor(x, y, TREE)) && oneAxis(x, y, CIV)) {
           return CIV;
         }
       }
 
+      if (grid[x][y] & FAUNA_ROAMS) {
+        if (!hasNeighbor(x, y, CIV) && allNeighborCount(x, y, BAREN) <= 2 && hasDiagnalNeighbor(x, y, FAUNA) && !hasDirectNeighbor(x, y, FAUNA)) {
+          return FAUNA;
+        }
+      }
+
       if (grid[x][y] === DIRT) {
-        if (hasNeighbor(x, y, WATER), allNeighborCount(x, y, PLANT) > allNeighborCount(x, y, CIV)) {
+        if (allNeighborCount(x, y, CIV) >= 4) {
+          return ROCK;
+        }
+        if (hasNeighbor(x, y, WATER) || allNeighborCount(x, y, PLANT) > allNeighborCount(x, y, CIV) + 2) {
           return GRASS;
         }
       }
@@ -414,16 +418,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         if (allNeighborCount(x, y, TREE) >= 3 && !hasNeighbor(x, y, CIV)) {
           return GROWTH;
         }
-        if (allNeighborCount(x, y, PLANT) < allNeighborCount(x, y, CIV)) {
+        if (allNeighborCount(x, y, PLANT) < allNeighborCount(x, y, EATS | BAREN) + 1) {
           return DIRT;
         }
       }
 
       if (grid[x][y] === ROCK) {
-        if (hasDirectNeighbor(x, y, TREE)) {
+        if (!hasNeighbor(x, y, CIV) && allNeighborCount(x, y, TREE | FAUNA) >= 2 || allNeighborCount(x, y, PLANT | FAUNA) >= 4) {
           return DIRT;
         }
-        if (allNeighborCount(x, y, WATER) >= 3) {
+        if (allNeighborCount(x, y, WATER) >= 4) {
           return DIRT;
         }
       }
@@ -444,11 +448,26 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
       }
 
       if (grid[x][y] === GROWTH) {
+        if (allNeighborCount(x, y, GROWTH) === 2 && hasNeighbor(x, y, WATER)) {
+          return FAUNA;
+        }
         return TREE;
       }
 
+      if (grid[x][y] === FAUNA) {
+        if (allNeighborCount(x, y, CIV) >= 2) {
+          return CIV;
+        }
+        if (hasNeighbor(x, y, CIV)) {
+          return DIRT;
+        }
+        if (allNeighborCount(x, y, EATS) > allNeighborCount(x, y, PLANT)) {
+          return GRASS;
+        }
+      }
+
       if (grid[x][y] === WATER) {
-        if (hasDirectNeighbor(x, y, CIV)) {
+        if (hasNeighbor(x, y, CIV)) {
           return GRASS;
         }
         if (hasDirectNeighbor(x, y, FOREST) && allNeighborCount(x, y, WATER) >= 3) {
@@ -464,6 +483,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
     function hasDirectNeighbor(x, y, flag) {
       return westNode(x, y) & flag || eastNode(x, y) & flag || northNode(x, y) & flag || southNode(x, y) & flag;
+    }
+
+    function hasDiagnalNeighbor(x, y, flag) {
+      return northwestNode(x, y) & flag || northeastNode(x, y) & flag || southwestNode(x, y) & flag || southeastNode(x, y) & flag;
     }
 
     function hasNeighbor(x, y, flag) {
