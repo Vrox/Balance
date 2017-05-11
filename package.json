@@ -1,5 +1,5 @@
 {
-  "name": "webthingy",
+  "name": "balance",
   "version": "1.0.0",
   "description": "",
   "main": "gulpfile.js",
@@ -10,7 +10,9 @@
   "license": "ISC",
   "devDependencies": {
     "babel-core": "^6.24.0",
+    "babelify": "^7.3.0",
     "browserify": "^14.3.0",
+    "browserify-shader": "^0.1.2",
     "gulp": "^3.9.1",
     "gulp-babel": "^6.1.2",
     "gulp-notify": "^3.0.0",

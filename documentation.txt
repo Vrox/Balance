@@ -53,7 +53,7 @@ enough to prevent too much confusion.
 The initial state of the cell map was chosen because when uninterrupted, it immediately
 shows viewers the destructive nature of Civilization cells, as well as the growth
 of Forest cells. It also immediately leaves very inorganic patterns of rock behind
-the Civilization, hopefully hinting at the nature of the cells without needing words.
+the Civilization, hopefully hinting at the nature of the cells without needing words
 
 A light grey background was chosen to keep the spotlight on the grid itself, while
 giving some contrast to the Wall cells.
