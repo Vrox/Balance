@@ -36,17 +36,24 @@ class WorldMap {
     grid[21][33].cellType = CIV;
     grid[22][33].cellType = CIV;
 
-    grid[3][16].cellType = CIV;
+    grid[3][16].cellType = TREE;
+    grid[4][16].cellType = TREE;
+    grid[5][15].cellType = TREE;
 
-    grid[73][40].cellType = TREE;
-    grid[74][40].cellType = TREE;
-    grid[75][40].cellType = TREE;
-    grid[73][41].cellType = TREE;
-    grid[74][41].cellType = TREE;
-    grid[75][41].cellType = TREE;
-    grid[73][42].cellType = TREE;
-    grid[74][42].cellType = TREE;
-    grid[75][42].cellType = TREE;
+    grid[30][27].cellType = WATER;
+    grid[31][27].cellType = WATER;
+    grid[30][28].cellType = WATER;
+    grid[31][28].cellType = WATER;
+
+    // grid[73][40].cellType = TREE;
+    // grid[74][40].cellType = TREE;
+    // grid[75][40].cellType = TREE;
+    // grid[73][41].cellType = TREE;
+    // grid[74][41].cellType = TREE;
+    // grid[75][41].cellType = TREE;
+    // grid[73][42].cellType = TREE;
+    // grid[74][42].cellType = TREE;
+    // grid[75][42].cellType = TREE;
 
     grid[23][17].cellType = TREE;
     grid[24][17].cellType = TREE;

@@ -1,4 +1,4 @@
-/* global require module Float32Array */
+/* global require module Float32Array Uint8Array */
 const WebGLUtils = require('./WebGLUtils.js');
 const ShaderAttribute = require('./ShaderAttribute.js');
 const ShaderUniform = require('./ShaderUniform.js');
@@ -16,20 +16,54 @@ class Renderer {
     this.glCanvas = glCanvas;
     this.gl = glCanvas.getContext('webgl');
     const gl = this.gl;
+    gl.enable(gl.CULL_FACE);
+    gl.enable(gl.DEPTH_TEST);
+    //gl.cullFace(gl.FRONT);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-    this.triangles = new Float32Array([
-      -1, -1, 0,
-      +1, -1, 0,
-      -1,  1, 0,
-      -1,  1, 0,
-      +1, -1, 0,
-      +1,  1, 0
+    // this.triangles = new Float32Array([
+    //   // top face
+    //   -.5, -.5, 0,
+    //   +.5, -.5, 0,
+    //   -.5,  .5, 0,
+    //   -.5,  .5, 0,
+    //   +.5, -.5, 0,
+    //   +.5,  .5, 0
+    // ]);
+
+    const verts = new Float32Array([
+      -.5, -.5, 0,
+       .5, -.5, 0,
+      -.5,  .5, 0,
+       .5,  .5, 0,
+      -.5, -.5, 10,
+       .5, -.5, 10,
+      -.5,  .5, 10,
+       .5,  .5, 10
     ]);
 
-    this.buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, this.triangles, gl.STATIC_DRAW);
+    const indicies = new Uint8Array([
+      1, 0, 2,
+      3, 1, 2,
+      4, 0, 1,
+      4, 1, 5,
+      5, 1, 3,
+      5, 3, 7,
+      6, 3, 2,
+      6, 7, 3,
+      0, 4, 2,
+      4, 6, 2
+    ]);
+
+    const vertBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
+
+    const indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indicies, gl.STATIC_DRAW);
+
+//    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
     this.vertexShader = WebGLUtils.createShader(
       gl, gl.VERTEX_SHADER, vertShader()

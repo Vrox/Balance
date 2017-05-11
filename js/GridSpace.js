@@ -56,7 +56,7 @@ class GridSpace {
 
   set cellType(type) {
     this._cellType = type;
-    this.modelMatrix[14] = cellTypes.heights[type];
+    this.modelMatrix[14] = -cellTypes.heights[type];
   }
   get cellType() {
     return this._cellType;
@@ -247,7 +247,8 @@ class GridSpace {
     mat4.multiply(renderer.finalMat, renderer.projViewMat, this.modelMatrix);
     renderer.matrixUniform.setUniformMatrix4fv(renderer.finalMat);
     renderer.colorUniform.setUniform4fv(cellTypes.colors[this.cellType]);
-    renderer.gl.drawArrays( renderer.gl.TRIANGLES, 0, 6 );
+    renderer.gl.drawElements(renderer.gl.TRIANGLES, 30, renderer.gl.UNSIGNED_BYTE, 0);
+
   }
 
 }

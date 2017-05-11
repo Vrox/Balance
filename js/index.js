@@ -13,8 +13,8 @@ window.onload = init;
 const canvasWidth = 1024;
 const canvasHeight = 700;
 
-let GRID_WIDTH = 100;
-let GRID_HEIGHT = 100;
+let GRID_WIDTH = 50;
+let GRID_HEIGHT = 50;
 
 const CELL_SIZE = canvasHeight/GRID_HEIGHT;
 
@@ -100,21 +100,14 @@ function tick(dt) {
   const halfH = worldMap.height/2;
 
 //  console.log(camera.perspective);
-  camera.position[2] = -50;
-  camera.position[0] = halfW + Math.cos(lastTime/8000) * halfW * 1.2;
-  camera.position[1] = halfH + Math.sin(lastTime/8000) * halfH * 1.2;
+  camera.position[2] = -35;
+  camera.position[0] = halfW + Math.cos(lastTime/4000) * halfW * 1.8;
+  camera.position[1] = halfH + Math.sin(lastTime/4000) * halfH * 1.8;
   // camera.position.x = 1; //Math.cos(lastTime);
   // camera.position.y = Math.sin(lastTime);
   camera.lookAt([halfW, halfH,0]);
   camera.up = [0, 0, -1];
 
-
-  // matrixUniform.setUniformMatrix4fv(new Float32Array(
-  //   [ 0.1, 0, 0, 0,
-  //     0, 0.1, 0, 0,
-  //     0, 0, 0.1, 1,
-  //     0, 0, 1, 1]
-  // ));
 }
 
 function draw() {

@@ -53,14 +53,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
         var heights = {};
         heights[GRASS] = 0.;
-        heights[CIV] = 0.5;
+        heights[CIV] = 0.9;
         heights[DIRT] = -0.2;
-        heights[TREE] = 1.3;
-        heights[ROCK] = 0.3;
-        heights[GROWTH] = 0.8;
+        heights[TREE] = 2.5;
+        heights[ROCK] = 0.5;
+        heights[GROWTH] = 1.5;
         heights[WATER] = -0.5;
-        heights[FAUNA] = 0.4;
-        heights[WALL] = 2.0;
+        heights[FAUNA] = 0.8;
+        heights[WALL] = 3.0;
 
         module.exports.ids = ids;
         module.exports.colors = colors;
@@ -299,13 +299,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     mat4.multiply(renderer.finalMat, renderer.projViewMat, this.modelMatrix);
                     renderer.matrixUniform.setUniformMatrix4fv(renderer.finalMat);
                     renderer.colorUniform.setUniform4fv(cellTypes.colors[this.cellType]);
-                    renderer.gl.drawArrays(renderer.gl.TRIANGLES, 0, 6);
+                    renderer.gl.drawElements(renderer.gl.TRIANGLES, 30, renderer.gl.UNSIGNED_BYTE, 0);
                 }
             }, {
                 key: "cellType",
                 set: function set(type) {
                     this._cellType = type;
-                    this.modelMatrix[14] = cellTypes.heights[type];
+                    this.modelMatrix[14] = -cellTypes.heights[type];
                 },
                 get: function get() {
                     return this._cellType;
@@ -317,7 +317,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
         module.exports = GridSpace;
     }, { "./CellTypes.js": 1, "gl-matrix": 20 }], 3: [function (require, module, exports) {
-        /* global require module Float32Array */
+        /* global require module Float32Array Uint8Array */
         var WebGLUtils = require('./WebGLUtils.js');
         var ShaderAttribute = require('./ShaderAttribute.js');
         var ShaderUniform = require('./ShaderUniform.js');
@@ -335,13 +335,34 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 this.glCanvas = glCanvas;
                 this.gl = glCanvas.getContext('webgl');
                 var gl = this.gl;
+                gl.enable(gl.CULL_FACE);
+                gl.enable(gl.DEPTH_TEST);
+                //gl.cullFace(gl.FRONT);
                 gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-                this.triangles = new Float32Array([-1, -1, 0, +1, -1, 0, -1, 1, 0, -1, 1, 0, +1, -1, 0, +1, 1, 0]);
+                // this.triangles = new Float32Array([
+                //   // top face
+                //   -.5, -.5, 0,
+                //   +.5, -.5, 0,
+                //   -.5,  .5, 0,
+                //   -.5,  .5, 0,
+                //   +.5, -.5, 0,
+                //   +.5,  .5, 0
+                // ]);
 
-                this.buffer = gl.createBuffer();
-                gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-                gl.bufferData(gl.ARRAY_BUFFER, this.triangles, gl.STATIC_DRAW);
+                var verts = new Float32Array([-.5, -.5, 0, .5, -.5, 0, -.5, .5, 0, .5, .5, 0, -.5, -.5, 10, .5, -.5, 10, -.5, .5, 10, .5, .5, 10]);
+
+                var indicies = new Uint8Array([1, 0, 2, 3, 1, 2, 4, 0, 1, 4, 1, 5, 5, 1, 3, 5, 3, 7, 6, 3, 2, 6, 7, 3, 0, 4, 2, 4, 6, 2]);
+
+                var vertBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
+
+                var indexBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indicies, gl.STATIC_DRAW);
+
+                //    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
                 this.vertexShader = WebGLUtils.createShader(gl, gl.VERTEX_SHADER, vertShader());
 
@@ -408,6 +429,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 
             gl.vertexAttribPointer(this.location, size, dataType, normalize, stride, offset);
+            gl.enableVertexAttribArray(this.location);
         };
 
         module.exports = ShaderAttribute;
@@ -583,7 +605,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }, {
                 key: "speed",
                 get: function get() {
-                    return 1; // TODO
+                    return 0.5; // TODO
                 }
             }]);
 
@@ -820,17 +842,24 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 grid[21][33].cellType = CIV;
                 grid[22][33].cellType = CIV;
 
-                grid[3][16].cellType = CIV;
+                grid[3][16].cellType = TREE;
+                grid[4][16].cellType = TREE;
+                grid[5][15].cellType = TREE;
 
-                grid[73][40].cellType = TREE;
-                grid[74][40].cellType = TREE;
-                grid[75][40].cellType = TREE;
-                grid[73][41].cellType = TREE;
-                grid[74][41].cellType = TREE;
-                grid[75][41].cellType = TREE;
-                grid[73][42].cellType = TREE;
-                grid[74][42].cellType = TREE;
-                grid[75][42].cellType = TREE;
+                grid[30][27].cellType = WATER;
+                grid[31][27].cellType = WATER;
+                grid[30][28].cellType = WATER;
+                grid[31][28].cellType = WATER;
+
+                // grid[73][40].cellType = TREE;
+                // grid[74][40].cellType = TREE;
+                // grid[75][40].cellType = TREE;
+                // grid[73][41].cellType = TREE;
+                // grid[74][41].cellType = TREE;
+                // grid[75][41].cellType = TREE;
+                // grid[73][42].cellType = TREE;
+                // grid[74][42].cellType = TREE;
+                // grid[75][42].cellType = TREE;
 
                 grid[23][17].cellType = TREE;
                 grid[24][17].cellType = TREE;
@@ -911,8 +940,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         var canvasWidth = 1024;
         var canvasHeight = 700;
 
-        var GRID_WIDTH = 100;
-        var GRID_HEIGHT = 100;
+        var GRID_WIDTH = 50;
+        var GRID_HEIGHT = 50;
 
         var CELL_SIZE = canvasHeight / GRID_HEIGHT;
 
@@ -993,20 +1022,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             var halfH = worldMap.height / 2;
 
             //  console.log(camera.perspective);
-            camera.position[2] = -50;
-            camera.position[0] = halfW + Math.cos(lastTime / 8000) * halfW * 1.2;
-            camera.position[1] = halfH + Math.sin(lastTime / 8000) * halfH * 1.2;
+            camera.position[2] = -35;
+            camera.position[0] = halfW + Math.cos(lastTime / 4000) * halfW * 1.8;
+            camera.position[1] = halfH + Math.sin(lastTime / 4000) * halfH * 1.8;
             // camera.position.x = 1; //Math.cos(lastTime);
             // camera.position.y = Math.sin(lastTime);
             camera.lookAt([halfW, halfH, 0]);
             camera.up = [0, 0, -1];
-
-            // matrixUniform.setUniformMatrix4fv(new Float32Array(
-            //   [ 0.1, 0, 0, 0,
-            //     0, 0.1, 0, 0,
-            //     0, 0, 0.1, 1,
-            //     0, 0, 1, 1]
-            // ));
         }
 
         function draw() {
@@ -8785,7 +8807,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }
     }, { "gl-vec3/cross": 32, "gl-vec3/dot": 33, "gl-vec3/subtract": 39 }], 52: [function (require, module, exports) {
         module.exports = function parse(params) {
-            var template = "precision mediump float; \n" + " \n" + "uniform vec4 u_color; \n" + " \n" + "void main() { \n" + "  gl_FragColor = u_color; \n" + "//  gl_FragColor = vec4(0, 1, 1, 1); \n" + "} \n" + " \n";
+            var template = "precision mediump float; \n" + " \n" + "uniform vec4 u_color; \n" + "varying float v_depth; \n" + " \n" + "void main() { \n" + "  float d = 1.0 - v_depth/10.; \n" + "  gl_FragColor = u_color * d * d; \n" + "//  gl_FragColor = vec4(0, 1, 1, 1); \n" + "} \n" + " \n";
             params = params || {};
             for (var key in params) {
                 var matcher = new RegExp("{{" + key + "}}", "g");
@@ -8795,7 +8817,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         };
     }, {}], 53: [function (require, module, exports) {
         module.exports = function parse(params) {
-            var template = "uniform mat4 u_mat; \n" + "attribute vec4 a_position; \n" + " \n" + "void main() { \n" + "  gl_Position = u_mat * a_position; \n" + "} \n" + " \n";
+            var template = "uniform mat4 u_mat; \n" + "attribute vec4 a_position; \n" + "varying float v_depth; \n" + " \n" + "void main() { \n" + "  v_depth = a_position.z; \n" + "  gl_Position = u_mat * a_position; \n" + "} \n" + " \n";
             params = params || {};
             for (var key in params) {
                 var matcher = new RegExp("{{" + key + "}}", "g");

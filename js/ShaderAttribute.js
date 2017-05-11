@@ -24,6 +24,7 @@ class ShaderAttribute {
       stride,
       offset
     );
+    gl.enableVertexAttribArray(this.location);
   }
 }
 

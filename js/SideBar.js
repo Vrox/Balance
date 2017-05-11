@@ -44,7 +44,7 @@ class SideBar {
   }
 
   get speed() {
-    return 1; // TODO
+    return 0.5; // TODO
   }
 }
 

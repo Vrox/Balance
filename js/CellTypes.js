@@ -37,14 +37,14 @@ colors[WALL] = new Float32Array([0, 0, 0, 1]);
 
 const heights = {};
 heights[GRASS] = 0.;
-heights[CIV] = 0.5;
+heights[CIV] = 0.9;
 heights[DIRT] = -0.2;
-heights[TREE] = 1.3;
-heights[ROCK] = 0.3;
-heights[GROWTH] = 0.8;
+heights[TREE] = 2.5;
+heights[ROCK] = 0.5;
+heights[GROWTH] = 1.5;
 heights[WATER] = -0.5;
-heights[FAUNA] = 0.4;
-heights[WALL] = 2.0;
+heights[FAUNA] = 0.8;
+heights[WALL] = 3.0;
 
 module.exports.ids = ids;
 module.exports.colors = colors;
