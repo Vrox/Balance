@@ -90,7 +90,7 @@ class Renderer {
     );
     this.colorUniform.setUniform4fv(new Float32Array([1., 1., 0., 0.]));
 
-    this.gl.clearColor( 1.0, 1.0, 1.0, 1.0 );
+    this.gl.clearColor( 0.0, 0.4, 0.4, 1.0 );
 
     this.camera = createCamera({ far: 9999 });
     this.projViewMat = mat4.create();

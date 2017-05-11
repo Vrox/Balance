@@ -29,9 +29,10 @@ const BAREN = ROCK | WALL;
 
 class GridSpace {
 
-  constructor(x, y, worldMap) {
+  constructor(x, y, worldMap, noise) {
     this.x = x;
     this.y = y;
+    this.baseHeight = noise * 10;
     this.worldMap = worldMap;
     this.modelMatrix = mat4.create();
     this.modelMatrix[12] = x;
@@ -56,7 +57,7 @@ class GridSpace {
 
   set cellType(type) {
     this._cellType = type;
-    this.modelMatrix[14] = -cellTypes.heights[type];
+    this.modelMatrix[14] = this.baseHeight - cellTypes.heights[type];
   }
   get cellType() {
     return this._cellType;

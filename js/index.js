@@ -105,7 +105,7 @@ function tick(dt) {
   camera.position[1] = halfH + Math.sin(lastTime/4000) * halfH * 1.8;
   // camera.position.x = 1; //Math.cos(lastTime);
   // camera.position.y = Math.sin(lastTime);
-  camera.lookAt([halfW, halfH,0]);
+  camera.lookAt([halfW, halfH, 5]);
   camera.up = [0, 0, -1];
 
 }

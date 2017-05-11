@@ -95,11 +95,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         var BAREN = ROCK | WALL;
 
         var GridSpace = function () {
-            function GridSpace(x, y, worldMap) {
+            function GridSpace(x, y, worldMap, noise) {
                 _classCallCheck(this, GridSpace);
 
                 this.x = x;
                 this.y = y;
+                this.baseHeight = noise * 10;
                 this.worldMap = worldMap;
                 this.modelMatrix = mat4.create();
                 this.modelMatrix[12] = x;
@@ -305,7 +306,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 key: "cellType",
                 set: function set(type) {
                     this._cellType = type;
-                    this.modelMatrix[14] = -cellTypes.heights[type];
+                    this.modelMatrix[14] = this.baseHeight - cellTypes.heights[type];
                 },
                 get: function get() {
                     return this._cellType;
@@ -379,7 +380,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 this.colorUniform = new ShaderUniform(gl, this.program, 'u_color');
                 this.colorUniform.setUniform4fv(new Float32Array([1., 1., 0., 0.]));
 
-                this.gl.clearColor(1.0, 1.0, 1.0, 1.0);
+                this.gl.clearColor(0.0, 0.4, 0.4, 1.0);
 
                 this.camera = createCamera({ far: 9999 });
                 this.projViewMat = mat4.create();
@@ -404,7 +405,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }();
 
         module.exports = Renderer;
-    }, { "../shaders/frag.glsl": 52, "../shaders/vert.glsl": 53, "./ShaderAttribute.js": 4, "./ShaderUniform.js": 5, "./WebGLUtils.js": 7, "gl-matrix": 20, "perspective-camera": 42 }], 4: [function (require, module, exports) {
+    }, { "../shaders/frag.glsl": 53, "../shaders/vert.glsl": 54, "./ShaderAttribute.js": 4, "./ShaderUniform.js": 5, "./WebGLUtils.js": 7, "gl-matrix": 20, "perspective-camera": 43 }], 4: [function (require, module, exports) {
         /* global module */
         var ShaderAttribute = function ShaderAttribute(gl, program, name, options) {
             _classCallCheck(this, ShaderAttribute);
@@ -804,6 +805,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         /* globals require module */
         var GridSpace = require('./GridSpace.js');
         var cellTypes = require('./CellTypes.js');
+        var perlin = require('perlin-noise');
 
         var _cellTypes$ids2 = cellTypes.ids,
             GRASS = _cellTypes$ids2.GRASS,
@@ -823,11 +825,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 this.width = width;
                 this.height = height;
 
+                var noise = perlin.generatePerlinNoise(width, height);
+
                 var grid = [this.width];
                 for (var x = 0; x < this.width; x++) {
                     grid[x] = [this.height];
                     for (var y = 0; y < this.height; y++) {
-                        grid[x][y] = new GridSpace(x, y, this);
+                        grid[x][y] = new GridSpace(x, y, this, noise[y * width + x]);
                     }
                 }
                 this.grid = grid;
@@ -925,7 +929,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }();
 
         module.exports = WorldMap;
-    }, { "./CellTypes.js": 1, "./GridSpace.js": 2 }], 9: [function (require, module, exports) {
+    }, { "./CellTypes.js": 1, "./GridSpace.js": 2, "perlin-noise": 42 }], 9: [function (require, module, exports) {
         /* globals Float32Array require module */
         var Renderer = require('./Renderer.js');
         var WorldMap = require('./WorldMap.js');
@@ -1027,7 +1031,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             camera.position[1] = halfH + Math.sin(lastTime / 4000) * halfH * 1.8;
             // camera.position.x = 1; //Math.cos(lastTime);
             // camera.position.y = Math.sin(lastTime);
-            camera.lookAt([halfW, halfH, 0]);
+            camera.lookAt([halfW, halfH, 5]);
             camera.up = [0, 0, -1];
         }
 
@@ -8426,8 +8430,79 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             return out;
         }
     }, {}], 42: [function (require, module, exports) {
+        exports.generatePerlinNoise = generatePerlinNoise;
+        exports.generateWhiteNoise = generateWhiteNoise;
+
+        function generatePerlinNoise(width, height, options) {
+            options = options || {};
+            var octaveCount = options.octaveCount || 4;
+            var amplitude = options.amplitude || 0.1;
+            var persistence = options.persistence || 0.2;
+            var whiteNoise = generateWhiteNoise(width, height);
+
+            var smoothNoiseList = new Array(octaveCount);
+            var i;
+            for (i = 0; i < octaveCount; ++i) {
+                smoothNoiseList[i] = generateSmoothNoise(i);
+            }
+            var perlinNoise = new Array(width * height);
+            var totalAmplitude = 0;
+            // blend noise together
+            for (i = octaveCount - 1; i >= 0; --i) {
+                amplitude *= persistence;
+                totalAmplitude += amplitude;
+
+                for (var j = 0; j < perlinNoise.length; ++j) {
+                    perlinNoise[j] = perlinNoise[j] || 0;
+                    perlinNoise[j] += smoothNoiseList[i][j] * amplitude;
+                }
+            }
+            // normalization
+            for (i = 0; i < perlinNoise.length; ++i) {
+                perlinNoise[i] /= totalAmplitude;
+            }
+
+            return perlinNoise;
+
+            function generateSmoothNoise(octave) {
+                var noise = new Array(width * height);
+                var samplePeriod = Math.pow(2, octave);
+                var sampleFrequency = 1 / samplePeriod;
+                var noiseIndex = 0;
+                for (var y = 0; y < height; ++y) {
+                    var sampleY0 = Math.floor(y / samplePeriod) * samplePeriod;
+                    var sampleY1 = (sampleY0 + samplePeriod) % height;
+                    var vertBlend = (y - sampleY0) * sampleFrequency;
+                    for (var x = 0; x < width; ++x) {
+                        var sampleX0 = Math.floor(x / samplePeriod) * samplePeriod;
+                        var sampleX1 = (sampleX0 + samplePeriod) % width;
+                        var horizBlend = (x - sampleX0) * sampleFrequency;
+
+                        // blend top two corners
+                        var top = interpolate(whiteNoise[sampleY0 * width + sampleX0], whiteNoise[sampleY1 * width + sampleX0], vertBlend);
+                        // blend bottom two corners
+                        var bottom = interpolate(whiteNoise[sampleY0 * width + sampleX1], whiteNoise[sampleY1 * width + sampleX1], vertBlend);
+                        // final blend
+                        noise[noiseIndex] = interpolate(top, bottom, horizBlend);
+                        noiseIndex += 1;
+                    }
+                }
+                return noise;
+            }
+        }
+        function generateWhiteNoise(width, height) {
+            var noise = new Array(width * height);
+            for (var i = 0; i < noise.length; ++i) {
+                noise[i] = Math.random();
+            }
+            return noise;
+        }
+        function interpolate(x0, x1, alpha) {
+            return x0 * (1 - alpha) + alpha * x1;
+        }
+    }, {}], 43: [function (require, module, exports) {
         module.exports = require('./lib/camera-perspective');
-    }, { "./lib/camera-perspective": 45 }], 43: [function (require, module, exports) {
+    }, { "./lib/camera-perspective": 46 }], 44: [function (require, module, exports) {
         var assign = require('object-assign');
         var Ray = require('ray-3d');
 
@@ -8510,7 +8585,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 unproject: unproject
             });
         };
-    }, { "./camera-look-at": 44, "camera-picking-ray": 10, "camera-project": 11, "camera-unproject": 12, "gl-mat4/identity": 15, "gl-mat4/invert": 16, "gl-mat4/multiply": 18, "gl-vec3/add": 30, "gl-vec3/set": 37, "object-assign": 46, "ray-3d": 47 }], 44: [function (require, module, exports) {
+    }, { "./camera-look-at": 45, "camera-picking-ray": 10, "camera-project": 11, "camera-unproject": 12, "gl-mat4/identity": 15, "gl-mat4/invert": 16, "gl-mat4/multiply": 18, "gl-vec3/add": 30, "gl-vec3/set": 37, "object-assign": 47, "ray-3d": 48 }], 45: [function (require, module, exports) {
         // could be modularized...
         var cross = require('gl-vec3/cross');
         var sub = require('gl-vec3/subtract');
@@ -8546,7 +8621,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 normalize(up, up);
             }
         };
-    }, { "gl-vec3/copy": 31, "gl-vec3/cross": 32, "gl-vec3/dot": 33, "gl-vec3/normalize": 34, "gl-vec3/scale": 35, "gl-vec3/subtract": 39 }], 45: [function (require, module, exports) {
+    }, { "gl-vec3/copy": 31, "gl-vec3/cross": 32, "gl-vec3/dot": 33, "gl-vec3/normalize": 34, "gl-vec3/scale": 35, "gl-vec3/subtract": 39 }], 46: [function (require, module, exports) {
         var create = require('./camera-base');
         var assign = require('object-assign');
         var defined = require('defined');
@@ -8588,7 +8663,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 update: update
             });
         };
-    }, { "./camera-base": 43, "defined": 14, "gl-mat4/lookAt": 17, "gl-mat4/perspective": 19, "gl-vec3/add": 30, "object-assign": 46 }], 46: [function (require, module, exports) {
+    }, { "./camera-base": 44, "defined": 14, "gl-mat4/lookAt": 17, "gl-mat4/perspective": 19, "gl-vec3/add": 30, "object-assign": 47 }], 47: [function (require, module, exports) {
         'use strict';
 
         function ToObject(val) {
@@ -8615,7 +8690,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
             return to;
         };
-    }, {}], 47: [function (require, module, exports) {
+    }, {}], 48: [function (require, module, exports) {
         var intersectRayTriangle = require('ray-triangle-intersection');
         var intersectRayPlane = require('ray-plane-intersection');
         var intersectRaySphere = require('ray-sphere-intersection');
@@ -8673,7 +8748,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             tmpTriangle[2] = positions[c];
             return this.intersectsTriangle(tmpTriangle);
         };
-    }, { "gl-vec3/copy": 31, "ray-aabb-intersection": 48, "ray-plane-intersection": 49, "ray-sphere-intersection": 50, "ray-triangle-intersection": 51 }], 48: [function (require, module, exports) {
+    }, { "gl-vec3/copy": 31, "ray-aabb-intersection": 49, "ray-plane-intersection": 50, "ray-sphere-intersection": 51, "ray-triangle-intersection": 52 }], 49: [function (require, module, exports) {
         module.exports = intersection;
         module.exports.distance = distance;
 
@@ -8716,7 +8791,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
             return lo > hi ? Infinity : lo;
         }
-    }, {}], 49: [function (require, module, exports) {
+    }, {}], 50: [function (require, module, exports) {
         var dot = require('gl-vec3/dot');
         var add = require('gl-vec3/add');
         var scale = require('gl-vec3/scale');
@@ -8741,7 +8816,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 return null;
             }
         }
-    }, { "gl-vec3/add": 30, "gl-vec3/copy": 31, "gl-vec3/dot": 33, "gl-vec3/scale": 35 }], 50: [function (require, module, exports) {
+    }, { "gl-vec3/add": 30, "gl-vec3/copy": 31, "gl-vec3/dot": 33, "gl-vec3/scale": 35 }], 51: [function (require, module, exports) {
         var squaredDist = require('gl-vec3/squaredDistance');
         var dot = require('gl-vec3/dot');
         var sub = require('gl-vec3/subtract');
@@ -8770,7 +8845,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             scale(out, direction, len - Math.sqrt(rSq - dSq));
             return add(out, out, origin);
         }
-    }, { "gl-vec3/add": 30, "gl-vec3/dot": 33, "gl-vec3/scale": 35, "gl-vec3/scaleAndAdd": 36, "gl-vec3/squaredDistance": 38, "gl-vec3/subtract": 39 }], 51: [function (require, module, exports) {
+    }, { "gl-vec3/add": 30, "gl-vec3/dot": 33, "gl-vec3/scale": 35, "gl-vec3/scaleAndAdd": 36, "gl-vec3/squaredDistance": 38, "gl-vec3/subtract": 39 }], 52: [function (require, module, exports) {
         var cross = require('gl-vec3/cross');
         var dot = require('gl-vec3/dot');
         var sub = require('gl-vec3/subtract');
@@ -8805,7 +8880,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[2] = pt[2] + t * dir[2];
             return out;
         }
-    }, { "gl-vec3/cross": 32, "gl-vec3/dot": 33, "gl-vec3/subtract": 39 }], 52: [function (require, module, exports) {
+    }, { "gl-vec3/cross": 32, "gl-vec3/dot": 33, "gl-vec3/subtract": 39 }], 53: [function (require, module, exports) {
         module.exports = function parse(params) {
             var template = "precision mediump float; \n" + " \n" + "uniform vec4 u_color; \n" + "varying float v_depth; \n" + " \n" + "void main() { \n" + "  float d = 1.0 - v_depth/10.; \n" + "  gl_FragColor = u_color * d * d; \n" + "//  gl_FragColor = vec4(0, 1, 1, 1); \n" + "} \n" + " \n";
             params = params || {};
@@ -8815,7 +8890,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
             return template;
         };
-    }, {}], 53: [function (require, module, exports) {
+    }, {}], 54: [function (require, module, exports) {
         module.exports = function parse(params) {
             var template = "uniform mat4 u_mat; \n" + "attribute vec4 a_position; \n" + "varying float v_depth; \n" + " \n" + "void main() { \n" + "  v_depth = a_position.z; \n" + "  gl_Position = u_mat * a_position; \n" + "} \n" + " \n";
             params = params || {};

@@ -1,6 +1,7 @@
 /* globals require module */
 const GridSpace = require('./GridSpace.js');
 const cellTypes = require('./CellTypes.js');
+const perlin = require('perlin-noise');
 
 const {
   GRASS,
@@ -19,11 +20,13 @@ class WorldMap {
     this.width = width;
     this.height = height;
 
+    const noise = perlin.generatePerlinNoise(width, height);
+
     const grid = [this.width];
     for (var x = 0; x < this.width; x++) {
       grid[x] = [this.height];
       for (var y = 0; y < this.height; y++) {
-        grid[x][y] = new GridSpace(x, y, this);
+        grid[x][y] = new GridSpace(x, y, this, noise[y * width + x]);
       }
     }
     this.grid = grid;
