@@ -6,6 +6,7 @@ const vertShader = require('../shaders/vert.glsl');
 const fragShader = require('../shaders/frag.glsl');
 const createCamera = require('perspective-camera');
 const glMatrix = require('gl-matrix');
+const rayPick = require('camera-picking-ray');
 
 const {
   mat4
@@ -92,17 +93,33 @@ class Renderer {
 
     this.gl.clearColor( 0.0, 0.4, 0.4, 1.0 );
 
-    this.camera = createCamera({ far: 9999 });
+    this.viewport = [0, 0, gl.canvas.width, gl.canvas.height];
+
+    this.camera = createCamera({ far: 9999, viewport: this.viewport });
+    this.camera.position[2] = -35;
     this.projViewMat = mat4.create();
     this.finalMat = mat4.create();
+    this.invProjViewMat = mat4.create();
 
   }
 
-  renderPrep() {
-    const  { camera, projViewMat, gl } = this;
-    camera.update();
-    mat4.multiply(projViewMat, camera.projection, camera.view);
+  updateCamera() {
+    this.camera.update();
+    mat4.multiply(this.projViewMat, this.camera.projection, this.camera.view);
+    mat4.invert(this.invProjViewMat, this.projViewMat);
+  }
 
+  mouseRay(mouseLoc) {
+    const rayOrigin = [0,0,0];
+    const rayDir = [0,0,0];
+
+    rayPick(rayOrigin, rayDir, mouseLoc, this.viewport, this.invProjViewMat);
+
+    return { rayOrigin, rayDir };
+  }
+
+  renderPrep() {
+    const  { gl } = this;
     gl.clear( gl.COLOR_BUFFER_BIT );
   }
 }

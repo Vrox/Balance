@@ -295,11 +295,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     return (this.westNode.cellType & flag || this.eastNode.cellType & flag) !== (this.northNode.cellType & flag || this.southNode.cellType & flag);
                 }
             }, {
+                key: "naturalColor",
+                value: function naturalColor() {
+                    return cellTypes.colors[this.cellType];
+                }
+            }, {
                 key: "render",
                 value: function render(renderer) {
                     mat4.multiply(renderer.finalMat, renderer.projViewMat, this.modelMatrix);
                     renderer.matrixUniform.setUniformMatrix4fv(renderer.finalMat);
-                    renderer.colorUniform.setUniform4fv(cellTypes.colors[this.cellType]);
+                    renderer.colorUniform.setUniform4fv(this.worldMap.cellColor(this.x, this.y));
                     renderer.gl.drawElements(renderer.gl.TRIANGLES, 30, renderer.gl.UNSIGNED_BYTE, 0);
                 }
             }, {
@@ -317,7 +322,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }();
 
         module.exports = GridSpace;
-    }, { "./CellTypes.js": 1, "gl-matrix": 20 }], 3: [function (require, module, exports) {
+    }, { "./CellTypes.js": 1, "gl-matrix": 19 }], 3: [function (require, module, exports) {
         /* global require module Float32Array Uint8Array */
         var WebGLUtils = require('./WebGLUtils.js');
         var ShaderAttribute = require('./ShaderAttribute.js');
@@ -326,6 +331,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         var fragShader = require('../shaders/frag.glsl');
         var createCamera = require('perspective-camera');
         var glMatrix = require('gl-matrix');
+        var rayPick = require('camera-picking-ray');
 
         var mat4 = glMatrix.mat4;
 
@@ -382,20 +388,36 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 this.gl.clearColor(0.0, 0.4, 0.4, 1.0);
 
-                this.camera = createCamera({ far: 9999 });
+                this.viewport = [0, 0, gl.canvas.width, gl.canvas.height];
+
+                this.camera = createCamera({ far: 9999, viewport: this.viewport });
+                this.camera.position[2] = -35;
                 this.projViewMat = mat4.create();
                 this.finalMat = mat4.create();
+                this.invProjViewMat = mat4.create();
             }
 
             _createClass(Renderer, [{
+                key: "updateCamera",
+                value: function updateCamera() {
+                    this.camera.update();
+                    mat4.multiply(this.projViewMat, this.camera.projection, this.camera.view);
+                    mat4.invert(this.invProjViewMat, this.projViewMat);
+                }
+            }, {
+                key: "mouseRay",
+                value: function mouseRay(mouseLoc) {
+                    var rayOrigin = [0, 0, 0];
+                    var rayDir = [0, 0, 0];
+
+                    rayPick(rayOrigin, rayDir, mouseLoc, this.viewport, this.invProjViewMat);
+
+                    return { rayOrigin: rayOrigin, rayDir: rayDir };
+                }
+            }, {
                 key: "renderPrep",
                 value: function renderPrep() {
-                    var camera = this.camera,
-                        projViewMat = this.projViewMat,
-                        gl = this.gl;
-
-                    camera.update();
-                    mat4.multiply(projViewMat, camera.projection, camera.view);
+                    var gl = this.gl;
 
                     gl.clear(gl.COLOR_BUFFER_BIT);
                 }
@@ -405,7 +427,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }();
 
         module.exports = Renderer;
-    }, { "../shaders/frag.glsl": 53, "../shaders/vert.glsl": 54, "./ShaderAttribute.js": 4, "./ShaderUniform.js": 5, "./WebGLUtils.js": 7, "gl-matrix": 20, "perspective-camera": 43 }], 4: [function (require, module, exports) {
+    }, { "../shaders/frag.glsl": 52, "../shaders/vert.glsl": 53, "./ShaderAttribute.js": 4, "./ShaderUniform.js": 5, "./WebGLUtils.js": 6, "camera-picking-ray": 9, "gl-matrix": 19, "perspective-camera": 42 }], 4: [function (require, module, exports) {
         /* global module */
         var ShaderAttribute = function ShaderAttribute(gl, program, name, options) {
             _classCallCheck(this, ShaderAttribute);
@@ -563,217 +585,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
         module.exports = ShaderUniform;
     }, {}], 6: [function (require, module, exports) {
-        /* global require module */
-        var GridSpace = require('./GridSpace.js');
-        var CellTypes = require('./CellTypes.js');
-
-        var cells = [CellTypes.TREE, CellTypes.GRASS, CellTypes.CIV, CellTypes.DIRT, CellTypes.WATER, CellTypes.WALL];
-
-        var speedSelected = 1;
-        var speeds = [1.0, 0.5, 0.2, 0.1];
-
-        var brush0img = void 0;
-        var brush1img = void 0;
-        var brush2img = void 0;
-
-        var timer0img = void 0;
-        var timer1img = void 0;
-        var timer2img = void 0;
-        var timer3img = void 0;
-
-        var SideBar = function () {
-            function SideBar() {
-                _classCallCheck(this, SideBar);
-
-                brush0img = document.getElementById('brush0');
-                brush1img = document.getElementById('brush1');
-                brush2img = document.getElementById('brush2');
-
-                timer0img = document.getElementById('timer0');
-                timer1img = document.getElementById('timer1');
-                timer2img = document.getElementById('timer2');
-                timer3img = document.getElementById('timer3');
-            }
-
-            _createClass(SideBar, [{
-                key: "mouseUp",
-                value: function mouseUp(mouseX, mouseY) {}
-            }, {
-                key: "brushSize",
-                get: function get() {
-                    return 1; // TODO
-                }
-            }, {
-                key: "speed",
-                get: function get() {
-                    return 0.5; // TODO
-                }
-            }]);
-
-            return SideBar;
-        }();
-
-        module.exports = SideBar;
-
-        // const SIDEBAR_X = canvasHeight;
-        // const SIDEBAR_WIDTH = canvasWidth - SIDEBAR_X;
-        // const SIDEBAR_MARGIN = Math.floor(SIDEBAR_WIDTH * 0.05);
-        // const SIDEBAR_INNER_WIDTH = SIDEBAR_WIDTH - SIDEBAR_MARGIN * 2;
-        // const SIDEBAR_EFFECTIVE_WIDTH = SIDEBAR_INNER_WIDTH - SIDEBAR_MARGIN * 2;
-        //
-        // const BUTTON_X = SIDEBAR_X + SIDEBAR_MARGIN * 2;
-
-        // const TIME_BUTTON_COUNT = 4;
-        // const TIME_BUTTON_SIZE = (SIDEBAR_EFFECTIVE_WIDTH - (TIME_BUTTON_COUNT - 1) * SIDEBAR_MARGIN) / TIME_BUTTON_COUNT;
-        // const TIME_BUTTON_Y = SIDEBAR_MARGIN * 2;
-        //
-        // const CELL_BUTTON_SIZE = (SIDEBAR_EFFECTIVE_WIDTH - 2 * SIDEBAR_MARGIN) / 3;
-        // const CELL_BUTTON_ROW1_Y = TIME_BUTTON_Y + TIME_BUTTON_SIZE + SIDEBAR_MARGIN;
-        // const CELL_BUTTON_ROW2_Y = CELL_BUTTON_ROW1_Y + CELL_BUTTON_SIZE + SIDEBAR_MARGIN;
-        //
-        // const CELL_ICON_MARGIN = Math.floor(CELL_BUTTON_SIZE * 0.15);
-        // const CELL_ICON_SIZE = CELL_BUTTON_SIZE - CELL_ICON_MARGIN * 2;
-        //
-        // const TIME_ICON_MARGIN = Math.floor(TIME_BUTTON_SIZE * 0.15);
-        // const TIME_ICON_SIZE = TIME_BUTTON_SIZE - TIME_ICON_MARGIN * 2;
-        //
-        // const BRUSH_BUTTON_Y = CELL_BUTTON_ROW2_Y + CELL_BUTTON_SIZE + SIDEBAR_MARGIN * 2;
-        //
-        //
-        // const brushes = [0, 5, 10];
-
-
-        /*
-        
-        let cellSelected = 0;
-        const cells = [TREE, GRASS, CIV, DIRT, WATER, WALL];
-        
-        let brushSelected = 1;
-        
-        
-        
-        function drawCellIcon(x, y, index) {
-          textureCtx.fillStyle = cellColor(cells[index]);
-          textureCtx.fillRect(x + CELL_ICON_MARGIN, y + CELL_ICON_MARGIN, CELL_ICON_SIZE, CELL_ICON_SIZE);
-        }
-        
-        
-        const sidebarButtons = [
-          new SidebarButton(
-            BUTTON_X,
-            TIME_BUTTON_Y,
-            TIME_BUTTON_SIZE,
-            () => { textureCtx.drawImage(timer0img, BUTTON_X + TIME_ICON_MARGIN, TIME_BUTTON_Y + TIME_ICON_MARGIN, TIME_ICON_SIZE, TIME_ICON_SIZE); },
-            () => { speedSelected = 0; },
-            () => { return speedSelected === 0; }
-          ),
-          new SidebarButton(
-            BUTTON_X + TIME_BUTTON_SIZE + SIDEBAR_MARGIN,
-            TIME_BUTTON_Y,
-            TIME_BUTTON_SIZE,
-            () => { textureCtx.drawImage(timer1img, BUTTON_X + TIME_BUTTON_SIZE + SIDEBAR_MARGIN + TIME_ICON_MARGIN, TIME_BUTTON_Y + TIME_ICON_MARGIN, TIME_ICON_SIZE, TIME_ICON_SIZE); },
-            () => { speedSelected = 1; },
-            () => { return speedSelected === 1; }
-          ),
-          new SidebarButton(
-            BUTTON_X + (TIME_BUTTON_SIZE + SIDEBAR_MARGIN) * 2,
-            TIME_BUTTON_Y,
-            TIME_BUTTON_SIZE,
-            () => { textureCtx.drawImage(timer2img, BUTTON_X + (TIME_BUTTON_SIZE + SIDEBAR_MARGIN) * 2 + TIME_ICON_MARGIN, TIME_BUTTON_Y + TIME_ICON_MARGIN, TIME_ICON_SIZE, TIME_ICON_SIZE); },
-            () => { speedSelected = 2; },
-            () => { return speedSelected === 2; }
-          ),
-          new SidebarButton(
-            BUTTON_X + (TIME_BUTTON_SIZE + SIDEBAR_MARGIN) * 3,
-            TIME_BUTTON_Y,
-            TIME_BUTTON_SIZE,
-            () => { textureCtx.drawImage(timer3img, BUTTON_X + (TIME_BUTTON_SIZE + SIDEBAR_MARGIN) * 3 + TIME_ICON_MARGIN, TIME_BUTTON_Y + TIME_ICON_MARGIN, TIME_ICON_SIZE, TIME_ICON_SIZE); },
-            () => { speedSelected = 3; },
-            () => { return speedSelected === 3; }
-          ),
-          new SidebarButton(
-            BUTTON_X,
-            CELL_BUTTON_ROW1_Y,
-            CELL_BUTTON_SIZE,
-            () => { drawCellIcon(BUTTON_X, CELL_BUTTON_ROW1_Y, 0); },
-            () => { cellSelected = 0; },
-            () => { return cellSelected === 0; }
-          ),
-          new SidebarButton(
-            BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN,
-            CELL_BUTTON_ROW1_Y,
-            CELL_BUTTON_SIZE,
-            () => { drawCellIcon(BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN, CELL_BUTTON_ROW1_Y, 1); },
-            () => { cellSelected = 1; },
-            () => { return cellSelected === 1; }
-          ),
-          new SidebarButton(
-            BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2,
-            CELL_BUTTON_ROW1_Y,
-            CELL_BUTTON_SIZE,
-            () => { drawCellIcon(BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2,  CELL_BUTTON_ROW1_Y, 2); },
-            () => { cellSelected = 2; },
-            () => { return cellSelected === 2; }
-          ),
-          new SidebarButton(
-            BUTTON_X,
-            CELL_BUTTON_ROW2_Y,
-            CELL_BUTTON_SIZE,
-            () => { drawCellIcon(BUTTON_X, CELL_BUTTON_ROW2_Y, 3); },
-            () => { cellSelected = 3; },
-            () => { return cellSelected === 3; }
-          ),
-          new SidebarButton(
-            BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN,
-            CELL_BUTTON_ROW2_Y,
-            CELL_BUTTON_SIZE,
-            () => { drawCellIcon(BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN, CELL_BUTTON_ROW2_Y, 4); },
-            () => { cellSelected = 4; },
-            () => { return cellSelected === 4; }
-          ),
-          new SidebarButton(
-            BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2,
-            CELL_BUTTON_ROW2_Y,
-            CELL_BUTTON_SIZE,
-            () => { drawCellIcon(BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2, CELL_BUTTON_ROW2_Y, 5); },
-            () => { cellSelected = 5; },
-            () => { return cellSelected === 5; }
-          ),
-          new SidebarButton(
-            BUTTON_X,
-            CELL_BUTTON_ROW2_Y,
-            CELL_BUTTON_SIZE,
-            () => { drawCellIcon(BUTTON_X, CELL_BUTTON_ROW2_Y, 3); },
-            () => { cellSelected = 3; },
-            () => { return cellSelected === 3; }
-          ),
-          new SidebarButton(
-            BUTTON_X,
-            BRUSH_BUTTON_Y,
-            CELL_BUTTON_SIZE,
-            () => { textureCtx.drawImage(brush0img, BUTTON_X + CELL_ICON_MARGIN, BRUSH_BUTTON_Y + CELL_ICON_MARGIN, CELL_ICON_SIZE, CELL_ICON_SIZE); },
-            () => { brushSelected = 0; },
-            () => { return brushSelected === 0; }
-          ),
-          new SidebarButton(
-            BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN,
-            BRUSH_BUTTON_Y,
-            CELL_BUTTON_SIZE,
-            () => { textureCtx.drawImage(brush1img, BUTTON_X + CELL_BUTTON_SIZE + SIDEBAR_MARGIN + CELL_ICON_MARGIN, BRUSH_BUTTON_Y + CELL_ICON_MARGIN, CELL_ICON_SIZE, CELL_ICON_SIZE); },
-            () => { brushSelected = 1; },
-            () => { return brushSelected === 1; }
-          ),
-          new SidebarButton(
-            BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2,
-            BRUSH_BUTTON_Y,
-            CELL_BUTTON_SIZE,
-            () => { textureCtx.drawImage(brush2img, BUTTON_X + (CELL_BUTTON_SIZE + SIDEBAR_MARGIN) * 2 + CELL_ICON_MARGIN, BRUSH_BUTTON_Y + CELL_ICON_MARGIN, CELL_ICON_SIZE, CELL_ICON_SIZE); },
-            () => { brushSelected = 2; },
-            () => { return brushSelected === 2; }
-          ),
-        ];
-        */
-    }, { "./CellTypes.js": 1, "./GridSpace.js": 2 }], 7: [function (require, module, exports) {
         /* global module */
         module.exports.createProgram = function (gl, vertexShader, fragmentShader) {
             var program = gl.createProgram();
@@ -801,8 +612,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             console.log(gl.getShaderInfoLog(shader));
             gl.deleteShader(shader);
         };
-    }, {}], 8: [function (require, module, exports) {
-        /* globals require module */
+    }, {}], 7: [function (require, module, exports) {
+        /* globals require module Float32Array */
         var GridSpace = require('./GridSpace.js');
         var cellTypes = require('./CellTypes.js');
         var perlin = require('perlin-noise');
@@ -836,6 +647,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 }
                 this.grid = grid;
 
+                this.highlightLoc;
+                this.highlightSize = 3;
+                this.selectedCellType = CIV;
+
                 this.iterate(function (cell) {
                     return cell.link();
                 });
@@ -849,21 +664,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 grid[3][16].cellType = TREE;
                 grid[4][16].cellType = TREE;
                 grid[5][15].cellType = TREE;
-
-                grid[30][27].cellType = WATER;
-                grid[31][27].cellType = WATER;
-                grid[30][28].cellType = WATER;
-                grid[31][28].cellType = WATER;
-
-                // grid[73][40].cellType = TREE;
-                // grid[74][40].cellType = TREE;
-                // grid[75][40].cellType = TREE;
-                // grid[73][41].cellType = TREE;
-                // grid[74][41].cellType = TREE;
-                // grid[75][41].cellType = TREE;
-                // grid[73][42].cellType = TREE;
-                // grid[74][42].cellType = TREE;
-                // grid[75][42].cellType = TREE;
 
                 grid[23][17].cellType = TREE;
                 grid[24][17].cellType = TREE;
@@ -905,6 +705,46 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     }
                 }
             }, {
+                key: "cellColor",
+                value: function cellColor(gridX, gridY) {
+                    var color = this.grid[gridX][gridY].naturalColor();
+                    if (this.inHighlight(gridX, gridY)) {
+                        return [color[0] * 0.8, color[1] * 0.8, color[2] * 0.8, 1];
+                    }
+                    return color;
+                }
+            }, {
+                key: "hightlightInBounds",
+                value: function hightlightInBounds() {
+                    var _highlightLoc = this.highlightLoc,
+                        x = _highlightLoc.x,
+                        y = _highlightLoc.y;
+
+                    return x >= 0 && y >= 0 && x < this.width && y < this.height;
+                }
+            }, {
+                key: "highlightColor",
+                value: function highlightColor() {
+                    if (!this.hightlightInBounds()) {
+                        return new Float32Array([0, 0, 0, 1]);
+                    }
+                    var color = cellTypes.colors[this.selectedCellType];
+                    return new Float32Array([color[0] * 1.2, color[1] * 1.2, color[2] * 1.2, 1]);
+                }
+            }, {
+                key: "inHighlight",
+                value: function inHighlight(gridX, gridY) {
+                    if (this.highlightLoc === null) return false;
+                    var dx = Math.abs(this.highlightLoc.x - gridX);
+                    var dy = Math.abs(this.highlightLoc.y - gridY);
+                    return dx * dx + dy * dy <= this.highlightSize * this.highlightSize;
+                }
+            }, {
+                key: "paintHighlight",
+                value: function paintHighlight() {
+                    this.paint(this.highlightLoc.x, this.highlightLoc.y, this.highlightSize, this.selectedCellType);
+                }
+            }, {
                 key: "paint",
                 value: function paint(gridX, gridY, brushSize, cellType) {
                     for (var bx = gridX - brushSize, bxMax = gridX + brushSize; bx <= bxMax; bx++) {
@@ -921,7 +761,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 key: "paintCell",
                 value: function paintCell(gridX, gridY, cellType) {
                     if (gridX < 0 || gridY < 0 || gridX >= this.width || gridY >= this.height) return;
-                    this.grid[gridX][gridY] = cellType;
+                    this.grid[gridX][gridY].cellType = cellType;
                 }
             }]);
 
@@ -929,14 +769,26 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }();
 
         module.exports = WorldMap;
-    }, { "./CellTypes.js": 1, "./GridSpace.js": 2, "perlin-noise": 42 }], 9: [function (require, module, exports) {
+    }, { "./CellTypes.js": 1, "./GridSpace.js": 2, "perlin-noise": 41 }], 8: [function (require, module, exports) {
         /* globals Float32Array require module */
         var Renderer = require('./Renderer.js');
         var WorldMap = require('./WorldMap.js');
-        var Sidebar = require('./SideBar.js');
+        var cellTypes = require('./CellTypes.js');
         var glMatrix = require('gl-matrix');
+        var unproject = require('camera-unproject');
 
-        var mat4 = glMatrix.mat4;
+        var _cellTypes$ids3 = cellTypes.ids,
+            GRASS = _cellTypes$ids3.GRASS,
+            CIV = _cellTypes$ids3.CIV,
+            DIRT = _cellTypes$ids3.DIRT,
+            TREE = _cellTypes$ids3.TREE,
+            ROCK = _cellTypes$ids3.ROCK,
+            GROWTH = _cellTypes$ids3.GROWTH,
+            WATER = _cellTypes$ids3.WATER,
+            FAUNA = _cellTypes$ids3.FAUNA,
+            WALL = _cellTypes$ids3.WALL;
+        var vec3 = glMatrix.vec3,
+            mat4 = glMatrix.mat4;
 
 
         window.onload = init;
@@ -952,7 +804,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         var lastTime = null;
         var turnTimer = 0;
 
-        var mouseLoc = { x: 0, y: 0 };
+        var mouseLoc = [0, 0];
 
         var mouseDownTracker = false;
 
@@ -960,16 +812,20 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         var worldMap = void 0;
 
         var renderer = void 0;
+        var glCanvas = void 0;
+
+        var turnSpeed = 0.7;
+
+        var keys = [];
 
         function init() {
 
-            var glCanvas = document.getElementById('glCanvas');
+            glCanvas = document.getElementById('glCanvas');
             glCanvas.width = canvasWidth;
             glCanvas.height = canvasHeight;
             renderer = new Renderer(glCanvas);
 
             worldMap = new WorldMap(GRID_WIDTH, GRID_HEIGHT);
-            sidebar = new Sidebar();
 
             registerEventListeners();
 
@@ -977,27 +833,68 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }
 
         function registerEventListeners() {
-            // glCanvas.addEventListener('mousemove', (event) => {
-            //   const rect = glCanvas.getBoundingClientRect();
-            //   mouseLoc.x = event.clientX - rect.left;
-            //   mouseLoc.y = event.clientY - rect.top;
-            //   if (mouseDownTracker) {
-            //     paint();
-            //   }
-            // }, false);
-            //
-            // glCanvas.addEventListener("mousedown", () => {
-            //   mouseDownTracker = true;
-            //   paint();
-            // });
-            // glCanvas.addEventListener("mouseup", () => {
-            //   sidebar.mouseUp(mouseLoc.x, mouseLoc.y);
-            //   mouseDownTracker = false;
-            // });
-        }
 
-        function paint() {
-            worldMap.paint(Math.floor(mouseLoc.x / CELL_SIZE), Math.floor(mouseLoc.y / CELL_SIZE), sidebar.brushSize);
+            window.onkeyup = function (e) {
+                keys[e.keyCode] = false;
+            };
+            window.onkeydown = function (e) {
+                keys[e.keyCode] = true;
+                switch (e.keyCode) {
+                    case 49:
+                        // 0
+                        worldMap.selectedCellType = CIV;
+                        break;
+                    case 50:
+                        // 1
+                        worldMap.selectedCellType = TREE;
+                        break;
+                    case 51:
+                        // 2
+                        worldMap.selectedCellType = GRASS;
+                        break;
+                    case 52:
+                        // 3
+                        worldMap.selectedCellType = ROCK;
+                        break;
+                    case 53:
+                        // 4
+                        worldMap.selectedCellType = WATER;
+                        break;
+                    case 54:
+                        // 5
+                        worldMap.selectedCellType = DIRT;
+                        break;
+                    case 55:
+                        // 6
+                        worldMap.selectedCellType = WALL;
+                        break;
+                    case 81:
+                        // Q
+                        worldMap.highlightSize = Math.max(0, worldMap.highlightSize - 1);
+                        break;
+                    case 69:
+                        // E
+                        worldMap.highlightSize = Math.min(25, worldMap.highlightSize + 1);
+                        break;
+                }
+            };
+
+            glCanvas.addEventListener('mousemove', function (event) {
+                var rect = glCanvas.getBoundingClientRect();
+                mouseLoc[0] = event.clientX - rect.left;
+                mouseLoc[1] = event.clientY - rect.top;
+                if (mouseDownTracker) {
+                    paint();
+                }
+            }, false);
+
+            glCanvas.addEventListener("mousedown", function () {
+                mouseDownTracker = true;
+                paint();
+            });
+            glCanvas.addEventListener("mouseup", function () {
+                mouseDownTracker = false;
+            });
         }
 
         function render(time) {
@@ -1011,28 +908,100 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             draw();
         }
 
-        var combinedMat = mat4.create();
+        var cameraDist = 0;
 
         function tick(dt) {
             turnTimer += dt;
-            if (turnTimer >= sidebar.speed) {
-                turnTimer -= sidebar.speed;
+            if (turnTimer >= turnSpeed) {
+                turnTimer -= turnSpeed;
                 worldMap.turn();
             }
 
-            var camera = renderer.camera;
+            if (keys[90]) {
+                // Z
+                turnSpeed += turnSpeed * 1.5 * dt;
+            } else if (keys[67]) {
+                // C
+                turnSpeed -= turnSpeed * 1.5 * dt;
+            }
+
+            turnSpeed = Math.min(1, Math.max(0.05, turnSpeed));
+
+            renderer.gl.clearColor(0., 0.9 * (1.0 - turnSpeed), 0.9 * (1.0 - turnSpeed), 1.);
 
             var halfW = worldMap.width / 2;
             var halfH = worldMap.height / 2;
 
-            //  console.log(camera.perspective);
-            camera.position[2] = -35;
-            camera.position[0] = halfW + Math.cos(lastTime / 4000) * halfW * 1.8;
-            camera.position[1] = halfH + Math.sin(lastTime / 4000) * halfH * 1.8;
+            var _renderer = renderer,
+                camera = _renderer.camera;
+
+
+            if (keys[65]) {
+                // Q
+                cameraDist += dt * 1.0;
+            } else if (keys[68]) {
+                // E
+                cameraDist -= dt * 1.0;
+            }
+
+            if (keys[83]) {
+                // R
+                camera.position[2] -= dt * 40.;
+            } else if (keys[87]) {
+                // F
+                camera.position[2] += dt * 40.;
+                camera.position[2] = Math.min(0, camera.position[2]);
+            }
+
+            camera.position[0] = halfW + Math.cos(cameraDist) * halfW * 1.8;
+            camera.position[1] = halfH + Math.sin(cameraDist) * halfH * 1.8;
             // camera.position.x = 1; //Math.cos(lastTime);
             // camera.position.y = Math.sin(lastTime);
             camera.lookAt([halfW, halfH, 5]);
             camera.up = [0, 0, -1];
+
+            renderer.updateCamera();
+
+            var _renderer$mouseRay = renderer.mouseRay(mouseLoc),
+                rayOrigin = _renderer$mouseRay.rayOrigin,
+                rayDir = _renderer$mouseRay.rayDir;
+
+            // Find mouse hover
+            // plane at Z = 0
+
+
+            var planeZ = 0;
+            var heightDiff = -rayOrigin[2] + planeZ;
+
+            // const camDir = vec3.fromValues(
+            //   camera.direction[0],
+            //   camera.direction[1],
+            //   camera.direction[2]
+            // );
+            // vec3.normalize(camDir, camDir);
+
+
+            var t = heightDiff / rayDir[2];
+
+            //console.log(t);
+
+            var hoverGridX = Math.floor(rayOrigin[0] + t * rayDir[0]);
+            var hoverGridY = Math.floor(rayOrigin[1] + t * rayDir[1]);
+
+            worldMap.highlightLoc = {
+                x: hoverGridX,
+                y: hoverGridY
+            };
+
+            debugModelMat[12] = hoverGridX;
+            debugModelMat[13] = hoverGridY;
+            debugModelMat[14] = planeZ;
+
+            //console.log(worldMap.highlightLoc);
+        }
+
+        function paint() {
+            worldMap.paintHighlight(TREE);
         }
 
         function draw() {
@@ -1040,8 +1009,20 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             worldMap.iterate(function (cell) {
                 cell.render(renderer);
             });
+            drawDebug();
         }
-    }, { "./Renderer.js": 3, "./SideBar.js": 6, "./WorldMap.js": 8, "gl-matrix": 20 }], 10: [function (require, module, exports) {
+
+        var debugModelMat = mat4.create();
+        var debugFinalMat = mat4.create();
+
+        function drawDebug() {
+
+            mat4.multiply(debugFinalMat, renderer.projViewMat, debugModelMat);
+            renderer.matrixUniform.setUniformMatrix4fv(debugFinalMat);
+            renderer.colorUniform.setUniform4fv(worldMap.highlightColor());
+            renderer.gl.drawElements(renderer.gl.TRIANGLES, 30, renderer.gl.UNSIGNED_BYTE, 0);
+        }
+    }, { "./CellTypes.js": 1, "./Renderer.js": 3, "./WorldMap.js": 7, "camera-unproject": 11, "gl-matrix": 19 }], 9: [function (require, module, exports) {
         var unproject = require('camera-unproject');
         var set = require('gl-vec3/set');
         var sub = require('gl-vec3/subtract');
@@ -1056,7 +1037,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             sub(direction, direction, origin);
             normalize(direction, direction);
         }
-    }, { "camera-unproject": 12, "gl-vec3/normalize": 34, "gl-vec3/set": 37, "gl-vec3/subtract": 39 }], 11: [function (require, module, exports) {
+    }, { "camera-unproject": 11, "gl-vec3/normalize": 33, "gl-vec3/set": 36, "gl-vec3/subtract": 38 }], 10: [function (require, module, exports) {
         var transformMat4 = require('gl-vec4/transformMat4');
         var set = require('gl-vec4/set');
 
@@ -1098,7 +1079,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[3] = w === 0 ? 0 : 1 / w;
             return out;
         }
-    }, { "gl-vec4/set": 40, "gl-vec4/transformMat4": 41 }], 12: [function (require, module, exports) {
+    }, { "gl-vec4/set": 39, "gl-vec4/transformMat4": 40 }], 11: [function (require, module, exports) {
         var transform = require('./lib/projectMat4');
 
         module.exports = unproject;
@@ -1138,7 +1119,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[2] = 2 * z - 1;
             return transform(out, out, invProjectionView);
         }
-    }, { "./lib/projectMat4": 13 }], 13: [function (require, module, exports) {
+    }, { "./lib/projectMat4": 12 }], 12: [function (require, module, exports) {
         module.exports = project;
 
         /**
@@ -1181,13 +1162,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[2] = (x * a02 + y * a12 + z * a22 + a32) * lw;
             return out;
         }
-    }, {}], 14: [function (require, module, exports) {
+    }, {}], 13: [function (require, module, exports) {
         module.exports = function () {
             for (var i = 0; i < arguments.length; i++) {
                 if (arguments[i] !== undefined) return arguments[i];
             }
         };
-    }, {}], 15: [function (require, module, exports) {
+    }, {}], 14: [function (require, module, exports) {
         module.exports = identity;
 
         /**
@@ -1215,7 +1196,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[15] = 1;
             return out;
         };
-    }, {}], 16: [function (require, module, exports) {
+    }, {}], 15: [function (require, module, exports) {
         module.exports = invert;
 
         /**
@@ -1283,7 +1264,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
             return out;
         };
-    }, {}], 17: [function (require, module, exports) {
+    }, {}], 16: [function (require, module, exports) {
         var identity = require('./identity');
 
         module.exports = lookAt;
@@ -1381,7 +1362,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
             return out;
         };
-    }, { "./identity": 15 }], 18: [function (require, module, exports) {
+    }, { "./identity": 14 }], 17: [function (require, module, exports) {
         module.exports = multiply;
 
         /**
@@ -1439,7 +1420,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
             return out;
         };
-    }, {}], 19: [function (require, module, exports) {
+    }, {}], 18: [function (require, module, exports) {
         module.exports = perspective;
 
         /**
@@ -1473,7 +1454,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[15] = 0;
             return out;
         };
-    }, {}], 20: [function (require, module, exports) {
+    }, {}], 19: [function (require, module, exports) {
         /**
          * @fileoverview gl-matrix - High performance matrix and vector operations
          * @author Brandon Jones
@@ -1511,7 +1492,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         exports.vec2 = require("./gl-matrix/vec2.js");
         exports.vec3 = require("./gl-matrix/vec3.js");
         exports.vec4 = require("./gl-matrix/vec4.js");
-    }, { "./gl-matrix/common.js": 21, "./gl-matrix/mat2.js": 22, "./gl-matrix/mat2d.js": 23, "./gl-matrix/mat3.js": 24, "./gl-matrix/mat4.js": 25, "./gl-matrix/quat.js": 26, "./gl-matrix/vec2.js": 27, "./gl-matrix/vec3.js": 28, "./gl-matrix/vec4.js": 29 }], 21: [function (require, module, exports) {
+    }, { "./gl-matrix/common.js": 20, "./gl-matrix/mat2.js": 21, "./gl-matrix/mat2d.js": 22, "./gl-matrix/mat3.js": 23, "./gl-matrix/mat4.js": 24, "./gl-matrix/quat.js": 25, "./gl-matrix/vec2.js": 26, "./gl-matrix/vec3.js": 27, "./gl-matrix/vec4.js": 28 }], 20: [function (require, module, exports) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
         
         Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -1582,7 +1563,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         };
 
         module.exports = glMatrix;
-    }, {}], 22: [function (require, module, exports) {
+    }, {}], 21: [function (require, module, exports) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
         
         Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -2038,7 +2019,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         };
 
         module.exports = mat2;
-    }, { "./common.js": 21 }], 23: [function (require, module, exports) {
+    }, { "./common.js": 20 }], 22: [function (require, module, exports) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
         
         Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -2544,7 +2525,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         };
 
         module.exports = mat2d;
-    }, { "./common.js": 21 }], 24: [function (require, module, exports) {
+    }, { "./common.js": 20 }], 23: [function (require, module, exports) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
         
         Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -3353,7 +3334,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         };
 
         module.exports = mat3;
-    }, { "./common.js": 21 }], 25: [function (require, module, exports) {
+    }, { "./common.js": 20 }], 24: [function (require, module, exports) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
         
         Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -5572,7 +5553,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         };
 
         module.exports = mat4;
-    }, { "./common.js": 21 }], 26: [function (require, module, exports) {
+    }, { "./common.js": 20 }], 25: [function (require, module, exports) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
         
         Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -6199,7 +6180,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         quat.equals = vec4.equals;
 
         module.exports = quat;
-    }, { "./common.js": 21, "./mat3.js": 24, "./vec3.js": 28, "./vec4.js": 29 }], 27: [function (require, module, exports) {
+    }, { "./common.js": 20, "./mat3.js": 23, "./vec3.js": 27, "./vec4.js": 28 }], 26: [function (require, module, exports) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
         
         Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -6788,7 +6769,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         };
 
         module.exports = vec2;
-    }, { "./common.js": 21 }], 28: [function (require, module, exports) {
+    }, { "./common.js": 20 }], 27: [function (require, module, exports) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
         
         Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -7585,7 +7566,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         };
 
         module.exports = vec3;
-    }, { "./common.js": 21 }], 29: [function (require, module, exports) {
+    }, { "./common.js": 20 }], 28: [function (require, module, exports) {
         /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
         
         Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -8207,7 +8188,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         };
 
         module.exports = vec4;
-    }, { "./common.js": 21 }], 30: [function (require, module, exports) {
+    }, { "./common.js": 20 }], 29: [function (require, module, exports) {
         module.exports = add;
 
         /**
@@ -8224,7 +8205,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[2] = a[2] + b[2];
             return out;
         }
-    }, {}], 31: [function (require, module, exports) {
+    }, {}], 30: [function (require, module, exports) {
         module.exports = copy;
 
         /**
@@ -8240,7 +8221,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[2] = a[2];
             return out;
         }
-    }, {}], 32: [function (require, module, exports) {
+    }, {}], 31: [function (require, module, exports) {
         module.exports = cross;
 
         /**
@@ -8264,7 +8245,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[2] = ax * by - ay * bx;
             return out;
         }
-    }, {}], 33: [function (require, module, exports) {
+    }, {}], 32: [function (require, module, exports) {
         module.exports = dot;
 
         /**
@@ -8277,7 +8258,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         function dot(a, b) {
             return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
         }
-    }, {}], 34: [function (require, module, exports) {
+    }, {}], 33: [function (require, module, exports) {
         module.exports = normalize;
 
         /**
@@ -8301,7 +8282,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
             return out;
         }
-    }, {}], 35: [function (require, module, exports) {
+    }, {}], 34: [function (require, module, exports) {
         module.exports = scale;
 
         /**
@@ -8318,7 +8299,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[2] = a[2] * b;
             return out;
         }
-    }, {}], 36: [function (require, module, exports) {
+    }, {}], 35: [function (require, module, exports) {
         module.exports = scaleAndAdd;
 
         /**
@@ -8336,7 +8317,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[2] = a[2] + b[2] * scale;
             return out;
         }
-    }, {}], 37: [function (require, module, exports) {
+    }, {}], 36: [function (require, module, exports) {
         module.exports = set;
 
         /**
@@ -8354,7 +8335,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[2] = z;
             return out;
         }
-    }, {}], 38: [function (require, module, exports) {
+    }, {}], 37: [function (require, module, exports) {
         module.exports = squaredDistance;
 
         /**
@@ -8370,7 +8351,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 z = b[2] - a[2];
             return x * x + y * y + z * z;
         }
-    }, {}], 39: [function (require, module, exports) {
+    }, {}], 38: [function (require, module, exports) {
         module.exports = subtract;
 
         /**
@@ -8387,7 +8368,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[2] = a[2] - b[2];
             return out;
         }
-    }, {}], 40: [function (require, module, exports) {
+    }, {}], 39: [function (require, module, exports) {
         module.exports = set;
 
         /**
@@ -8407,7 +8388,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[3] = w;
             return out;
         }
-    }, {}], 41: [function (require, module, exports) {
+    }, {}], 40: [function (require, module, exports) {
         module.exports = transformMat4;
 
         /**
@@ -8429,7 +8410,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[3] = m[3] * x + m[7] * y + m[11] * z + m[15] * w;
             return out;
         }
-    }, {}], 42: [function (require, module, exports) {
+    }, {}], 41: [function (require, module, exports) {
         exports.generatePerlinNoise = generatePerlinNoise;
         exports.generateWhiteNoise = generateWhiteNoise;
 
@@ -8500,9 +8481,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         function interpolate(x0, x1, alpha) {
             return x0 * (1 - alpha) + alpha * x1;
         }
-    }, {}], 43: [function (require, module, exports) {
+    }, {}], 42: [function (require, module, exports) {
         module.exports = require('./lib/camera-perspective');
-    }, { "./lib/camera-perspective": 46 }], 44: [function (require, module, exports) {
+    }, { "./lib/camera-perspective": 45 }], 43: [function (require, module, exports) {
         var assign = require('object-assign');
         var Ray = require('ray-3d');
 
@@ -8585,7 +8566,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 unproject: unproject
             });
         };
-    }, { "./camera-look-at": 45, "camera-picking-ray": 10, "camera-project": 11, "camera-unproject": 12, "gl-mat4/identity": 15, "gl-mat4/invert": 16, "gl-mat4/multiply": 18, "gl-vec3/add": 30, "gl-vec3/set": 37, "object-assign": 47, "ray-3d": 48 }], 45: [function (require, module, exports) {
+    }, { "./camera-look-at": 44, "camera-picking-ray": 9, "camera-project": 10, "camera-unproject": 11, "gl-mat4/identity": 14, "gl-mat4/invert": 15, "gl-mat4/multiply": 17, "gl-vec3/add": 29, "gl-vec3/set": 36, "object-assign": 46, "ray-3d": 47 }], 44: [function (require, module, exports) {
         // could be modularized...
         var cross = require('gl-vec3/cross');
         var sub = require('gl-vec3/subtract');
@@ -8621,7 +8602,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 normalize(up, up);
             }
         };
-    }, { "gl-vec3/copy": 31, "gl-vec3/cross": 32, "gl-vec3/dot": 33, "gl-vec3/normalize": 34, "gl-vec3/scale": 35, "gl-vec3/subtract": 39 }], 46: [function (require, module, exports) {
+    }, { "gl-vec3/copy": 30, "gl-vec3/cross": 31, "gl-vec3/dot": 32, "gl-vec3/normalize": 33, "gl-vec3/scale": 34, "gl-vec3/subtract": 38 }], 45: [function (require, module, exports) {
         var create = require('./camera-base');
         var assign = require('object-assign');
         var defined = require('defined');
@@ -8663,7 +8644,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 update: update
             });
         };
-    }, { "./camera-base": 44, "defined": 14, "gl-mat4/lookAt": 17, "gl-mat4/perspective": 19, "gl-vec3/add": 30, "object-assign": 47 }], 47: [function (require, module, exports) {
+    }, { "./camera-base": 43, "defined": 13, "gl-mat4/lookAt": 16, "gl-mat4/perspective": 18, "gl-vec3/add": 29, "object-assign": 46 }], 46: [function (require, module, exports) {
         'use strict';
 
         function ToObject(val) {
@@ -8690,7 +8671,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
             return to;
         };
-    }, {}], 48: [function (require, module, exports) {
+    }, {}], 47: [function (require, module, exports) {
         var intersectRayTriangle = require('ray-triangle-intersection');
         var intersectRayPlane = require('ray-plane-intersection');
         var intersectRaySphere = require('ray-sphere-intersection');
@@ -8748,7 +8729,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             tmpTriangle[2] = positions[c];
             return this.intersectsTriangle(tmpTriangle);
         };
-    }, { "gl-vec3/copy": 31, "ray-aabb-intersection": 49, "ray-plane-intersection": 50, "ray-sphere-intersection": 51, "ray-triangle-intersection": 52 }], 49: [function (require, module, exports) {
+    }, { "gl-vec3/copy": 30, "ray-aabb-intersection": 48, "ray-plane-intersection": 49, "ray-sphere-intersection": 50, "ray-triangle-intersection": 51 }], 48: [function (require, module, exports) {
         module.exports = intersection;
         module.exports.distance = distance;
 
@@ -8791,7 +8772,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
             return lo > hi ? Infinity : lo;
         }
-    }, {}], 50: [function (require, module, exports) {
+    }, {}], 49: [function (require, module, exports) {
         var dot = require('gl-vec3/dot');
         var add = require('gl-vec3/add');
         var scale = require('gl-vec3/scale');
@@ -8816,7 +8797,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 return null;
             }
         }
-    }, { "gl-vec3/add": 30, "gl-vec3/copy": 31, "gl-vec3/dot": 33, "gl-vec3/scale": 35 }], 51: [function (require, module, exports) {
+    }, { "gl-vec3/add": 29, "gl-vec3/copy": 30, "gl-vec3/dot": 32, "gl-vec3/scale": 34 }], 50: [function (require, module, exports) {
         var squaredDist = require('gl-vec3/squaredDistance');
         var dot = require('gl-vec3/dot');
         var sub = require('gl-vec3/subtract');
@@ -8845,7 +8826,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             scale(out, direction, len - Math.sqrt(rSq - dSq));
             return add(out, out, origin);
         }
-    }, { "gl-vec3/add": 30, "gl-vec3/dot": 33, "gl-vec3/scale": 35, "gl-vec3/scaleAndAdd": 36, "gl-vec3/squaredDistance": 38, "gl-vec3/subtract": 39 }], 52: [function (require, module, exports) {
+    }, { "gl-vec3/add": 29, "gl-vec3/dot": 32, "gl-vec3/scale": 34, "gl-vec3/scaleAndAdd": 35, "gl-vec3/squaredDistance": 37, "gl-vec3/subtract": 38 }], 51: [function (require, module, exports) {
         var cross = require('gl-vec3/cross');
         var dot = require('gl-vec3/dot');
         var sub = require('gl-vec3/subtract');
@@ -8880,7 +8861,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             out[2] = pt[2] + t * dir[2];
             return out;
         }
-    }, { "gl-vec3/cross": 32, "gl-vec3/dot": 33, "gl-vec3/subtract": 39 }], 53: [function (require, module, exports) {
+    }, { "gl-vec3/cross": 31, "gl-vec3/dot": 32, "gl-vec3/subtract": 38 }], 52: [function (require, module, exports) {
         module.exports = function parse(params) {
             var template = "precision mediump float; \n" + " \n" + "uniform vec4 u_color; \n" + "varying float v_depth; \n" + " \n" + "void main() { \n" + "  float d = 1.0 - v_depth/10.; \n" + "  gl_FragColor = u_color * d * d; \n" + "//  gl_FragColor = vec4(0, 1, 1, 1); \n" + "} \n" + " \n";
             params = params || {};
@@ -8890,7 +8871,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
             return template;
         };
-    }, {}], 54: [function (require, module, exports) {
+    }, {}], 53: [function (require, module, exports) {
         module.exports = function parse(params) {
             var template = "uniform mat4 u_mat; \n" + "attribute vec4 a_position; \n" + "varying float v_depth; \n" + " \n" + "void main() { \n" + "  v_depth = a_position.z; \n" + "  gl_Position = u_mat * a_position; \n" + "} \n" + " \n";
             params = params || {};
@@ -8900,4 +8881,4 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
             return template;
         };
-    }, {}] }, {}, [9]);
+    }, {}] }, {}, [8]);

@@ -1,4 +1,4 @@
-/* globals require module */
+/* globals require module Float32Array */
 const GridSpace = require('./GridSpace.js');
 const cellTypes = require('./CellTypes.js');
 const perlin = require('perlin-noise');
@@ -31,6 +31,10 @@ class WorldMap {
     }
     this.grid = grid;
 
+    this.highlightLoc;
+    this.highlightSize = 3;
+    this.selectedCellType = CIV;
+
     this.iterate(cell => cell.link());
 
     grid[25][25].cellType = CIV;
@@ -42,22 +46,7 @@ class WorldMap {
     grid[3][16].cellType = TREE;
     grid[4][16].cellType = TREE;
     grid[5][15].cellType = TREE;
-
-    grid[30][27].cellType = WATER;
-    grid[31][27].cellType = WATER;
-    grid[30][28].cellType = WATER;
-    grid[31][28].cellType = WATER;
-
-    // grid[73][40].cellType = TREE;
-    // grid[74][40].cellType = TREE;
-    // grid[75][40].cellType = TREE;
-    // grid[73][41].cellType = TREE;
-    // grid[74][41].cellType = TREE;
-    // grid[75][41].cellType = TREE;
-    // grid[73][42].cellType = TREE;
-    // grid[74][42].cellType = TREE;
-    // grid[75][42].cellType = TREE;
-
+    
     grid[23][17].cellType = TREE;
     grid[24][17].cellType = TREE;
     grid[25][17].cellType = TREE;
@@ -93,6 +82,55 @@ class WorldMap {
     }
   }
 
+  cellColor(gridX, gridY) {
+    const color = this.grid[gridX][gridY].naturalColor();
+    if (this.inHighlight(gridX, gridY)) {
+      return [
+        color[0] * 0.8,
+        color[1] * 0.8,
+        color[2] * 0.8,
+        1
+      ];
+    }
+    return (color);
+  }
+
+  hightlightInBounds() {
+    const { x, y } = this.highlightLoc;
+    return x >= 0 && y >= 0 && x < this.width && y < this.height;
+  }
+
+  highlightColor() {
+    if (!this.hightlightInBounds()) {
+      return new Float32Array([
+        0,0,0,1
+      ]);
+    }
+    const color = cellTypes.colors[this.selectedCellType];
+    return new Float32Array([
+      color[0] * 1.2,
+      color[1] * 1.2,
+      color[2] * 1.2,
+      1
+    ]);
+  }
+
+  inHighlight(gridX, gridY) {
+    if (this.highlightLoc === null) return false;
+    const dx = Math.abs(this.highlightLoc.x - gridX);
+    const dy = Math.abs(this.highlightLoc.y - gridY);
+    return (dx * dx + dy * dy <= this.highlightSize * this.highlightSize);
+  }
+
+  paintHighlight() {
+    this.paint(
+      this.highlightLoc.x,
+      this.highlightLoc.y,
+      this.highlightSize,
+      this.selectedCellType
+    );
+  }
+
   paint(gridX, gridY, brushSize, cellType) {
     for(let bx = gridX - brushSize, bxMax = gridX + brushSize; bx <= bxMax; bx++) {
       for(let by = gridY - brushSize, byMax = gridY + brushSize; by <= byMax; by++) {
@@ -107,8 +145,11 @@ class WorldMap {
 
   paintCell(gridX, gridY, cellType) {
     if (gridX < 0 || gridY < 0 || gridX >= this.width || gridY >= this.height) return;
-    this.grid[gridX][gridY] = cellType;
+    this.grid[gridX][gridY].cellType = cellType;
   }
+
+
+
 }
 
 module.exports = WorldMap;

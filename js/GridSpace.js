@@ -28,7 +28,6 @@ const EATS = CIV | FAUNA;
 const BAREN = ROCK | WALL;
 
 class GridSpace {
-
   constructor(x, y, worldMap, noise) {
     this.x = x;
     this.y = y;
@@ -244,12 +243,15 @@ class GridSpace {
       (this.northNode.cellType & flag || this.southNode.cellType & flag);
   }
 
+  naturalColor() {
+    return cellTypes.colors[this.cellType];
+  }
+
   render(renderer) {
     mat4.multiply(renderer.finalMat, renderer.projViewMat, this.modelMatrix);
     renderer.matrixUniform.setUniformMatrix4fv(renderer.finalMat);
-    renderer.colorUniform.setUniform4fv(cellTypes.colors[this.cellType]);
+    renderer.colorUniform.setUniform4fv(this.worldMap.cellColor(this.x, this.y));
     renderer.gl.drawElements(renderer.gl.TRIANGLES, 30, renderer.gl.UNSIGNED_BYTE, 0);
-
   }
 
 }

@@ -6,6 +6,7 @@
 	<meta charset="utf-8">
 	<title>Balance</title>
   <script src="dist/app.js"></script>
+	<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
 	<style>
     canvas {
       padding-left: 0;
@@ -18,23 +19,21 @@
     body {
       margin-top: 0;
       margin-left: 0;
-      background-color: #1e1e1e
+      background-color: #1e1e1e;
+			color: #EFEFEF;
+			font-family: 'Roboto', sans-serif;
+			text-align: center;
     }
 	</style>
 </head>
 
-<div style="display:none;">
-	<img id="brush0" src="img/brush0.png">
-  <img id="brush1" src="img/brush1.png">
- 	<img id="brush2" src="img/brush2.png">
-	<img id="timer0" src="img/timer0.png">
-	<img id="timer1" src="img/timer1.png">
-	<img id="timer2" src="img/timer2.png">
-	<img id="timer3" src="img/timer3.png">
-</div>
-
 <body id="coolBody">
 	<canvas id="glCanvas">Your browser does not support canvas :(</canvas>
+	WASD to move the camera<br>
+	Number keys to change brush type<br>
+	Click and drag to paint<br>
+	Q and E to resize brush<br>
+	Z and C to change simulation speed<br>
 </body>
 
 </html>
