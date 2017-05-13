@@ -33,7 +33,7 @@ class WorldMap {
 
     this.highlightLoc;
     this.highlightSize = 3;
-    this.selectedCellType = CIV;
+    this.selectedCellType = TREE;
 
     this.iterate(cell => cell.link());
 
@@ -46,7 +46,7 @@ class WorldMap {
     grid[3][16].cellType = TREE;
     grid[4][16].cellType = TREE;
     grid[5][15].cellType = TREE;
-    
+
     grid[23][17].cellType = TREE;
     grid[24][17].cellType = TREE;
     grid[25][17].cellType = TREE;

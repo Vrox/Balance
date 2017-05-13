@@ -42,7 +42,7 @@ heights[DIRT] = -0.2;
 heights[TREE] = 2.5;
 heights[ROCK] = 0.5;
 heights[GROWTH] = 1.5;
-heights[WATER] = -0.5;
+heights[WATER] = 0.0;
 heights[FAUNA] = 0.8;
 heights[WALL] = 3.0;
 

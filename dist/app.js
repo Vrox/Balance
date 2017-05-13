@@ -58,7 +58,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         heights[TREE] = 2.5;
         heights[ROCK] = 0.5;
         heights[GROWTH] = 1.5;
-        heights[WATER] = -0.5;
+        heights[WATER] = 0.0;
         heights[FAUNA] = 0.8;
         heights[WALL] = 3.0;
 
@@ -132,6 +132,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     this.southeastNode = grid[x === width - 1 ? 0 : x + 1][y === height - 1 ? 0 : y + 1];
                 }
             }, {
+                key: "realHeight",
+                value: function realHeight() {
+                    return this.modelMatrix[14];
+                }
+            }, {
                 key: "resolve",
                 value: function resolve() {
                     var cellType = this.cellType,
@@ -147,11 +152,27 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         northwestNode = this.northwestNode;
 
 
-                    if (cellType & WATER_FLOWS) {
-                        if (x !== 0 && y !== 0 && northwestNode.cellType === WATER || x !== 0 && !(northNode.cellType & WATER_FLOWS) && westNode.cellType === WATER || y !== 0 && !(westNode.cellType & WATER_FLOWS) && northNode.cellType === WATER) {
-                            return WATER;
-                        }
+                    var waterLeniency = 0.;
+                    if (cellType !== WATER) {
+                        if (northNode.cellType === WATER && northNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+                        if (northeastNode.cellType === WATER && northeastNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+                        if (eastNode.cellType === WATER && eastNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+                        if (southeastNode.cellType === WATER && southeastNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+                        if (southNode.cellType === WATER && southNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+                        if (southwestNode.cellType === WATER && southwestNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+                        if (westNode.cellType === WATER && westNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+                        if (northwestNode.cellType === WATER && northwestNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+                    } else {
+                        if (this.baseHeight < 5) return GRASS;
                     }
+
+                    // if (cellType & WATER_FLOWS) {
+                    //   if (((x !== 0 && y !== 0) && northwestNode.cellType === WATER) ||
+                    //   (x !==0 && !(northNode.cellType & WATER_FLOWS) && westNode.cellType === WATER) ||
+                    //   (y !== 0 && !(westNode.cellType & WATER_FLOWS) && northNode.cellType === WATER)) {
+                    //     return WATER;
+                    //   }
+                    // }
 
                     if (cellType & BUILDABLE) {
                         if ((this.allNeighborCount(TREE | GRASS | FAUNA) >= 3 || this.hasNeighbor(TREE)) && this.oneAxis(CIV)) {
@@ -159,7 +180,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         }
                     }
 
-                    if (cellType & FAUNA_ROAMS) {
+                    if (cellType & FAUNA_ROAMS && this.baseHeight > 6) {
                         if (!this.hasNeighbor(CIV) && this.allNeighborCount(BAREN) <= 2 && this.hasDiagnalNeighbor(FAUNA) && !this.hasDirectNeighbor(FAUNA)) {
                             return FAUNA;
                         }
@@ -208,7 +229,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     }
 
                     if (cellType === GROWTH) {
-                        if (this.allNeighborCount(GROWTH) === 2 && this.hasNeighbor(WATER)) {
+                        if (this.allNeighborCount(GROWTH) === 2 && this.hasNeighbor(WATER) && this.baseHeight > 6) {
                             return FAUNA;
                         }
                         return TREE;
@@ -649,7 +670,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 this.highlightLoc;
                 this.highlightSize = 3;
-                this.selectedCellType = CIV;
+                this.selectedCellType = TREE;
 
                 this.iterate(function (cell) {
                     return cell.link();

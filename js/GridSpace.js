@@ -62,6 +62,10 @@ class GridSpace {
     return this._cellType;
   }
 
+  realHeight() {
+    return this.modelMatrix[14];
+  }
+
   resolve() {
     const {cellType, x, y} = this;
     const {
@@ -75,13 +79,28 @@ class GridSpace {
       northwestNode
     } = this;
 
-    if (cellType & WATER_FLOWS) {
-      if (((x !== 0 && y !== 0) && northwestNode.cellType === WATER) ||
-      (x !==0 && !(northNode.cellType & WATER_FLOWS) && westNode.cellType === WATER) ||
-      (y !== 0 && !(westNode.cellType & WATER_FLOWS) && northNode.cellType === WATER)) {
-        return WATER;
-      }
+    const waterLeniency = 0.;
+    if (cellType !== WATER) {
+      if (northNode.cellType === WATER && northNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+      if (northeastNode.cellType === WATER && northeastNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+      if (eastNode.cellType === WATER && eastNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+      if (southeastNode.cellType === WATER && southeastNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+      if (southNode.cellType === WATER && southNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+      if (southwestNode.cellType === WATER && southwestNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+      if (westNode.cellType === WATER && westNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+      if (northwestNode.cellType === WATER && northwestNode.realHeight() < this.realHeight() + waterLeniency) return WATER;
+    } else {
+      if (this.baseHeight < 5) return GRASS;
     }
+
+
+    // if (cellType & WATER_FLOWS) {
+    //   if (((x !== 0 && y !== 0) && northwestNode.cellType === WATER) ||
+    //   (x !==0 && !(northNode.cellType & WATER_FLOWS) && westNode.cellType === WATER) ||
+    //   (y !== 0 && !(westNode.cellType & WATER_FLOWS) && northNode.cellType === WATER)) {
+    //     return WATER;
+    //   }
+    // }
 
     if (cellType & BUILDABLE) {
       if ((this.allNeighborCount(TREE | GRASS | FAUNA) >= 3 || this.hasNeighbor(TREE)) && this.oneAxis(CIV)) {
@@ -89,7 +108,7 @@ class GridSpace {
       }
     }
 
-    if (cellType & FAUNA_ROAMS) {
+    if (cellType & FAUNA_ROAMS && this.baseHeight > 6) {
       if (!this.hasNeighbor(CIV) && this.allNeighborCount(BAREN) <= 2 && this.hasDiagnalNeighbor(FAUNA) && !this.hasDirectNeighbor(FAUNA)) {
         return FAUNA;
       }
@@ -139,7 +158,7 @@ class GridSpace {
     }
 
     if (cellType === GROWTH) {
-      if (this.allNeighborCount(GROWTH) === 2 && this.hasNeighbor(WATER)) {
+      if (this.allNeighborCount(GROWTH) === 2 && this.hasNeighbor(WATER)  && this.baseHeight > 6) {
         return FAUNA;
       }
       return TREE;
