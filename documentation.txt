@@ -1,59 +1,47 @@
-Project 1 Documentation
+Project 2 Documentation
 Benjamin Gilchrist
 
-For this project I simulated a world using cellular automata, with several complex
-systems interacting with each other. I put an emphasis on the natural world, especially
-on living things.
+In turning my previous project to 3D, most of the work done was just in getting
+it set up and running, as well as some major code cleanup, since the entire last
+project was in one horrible file.
+WebGL was way more similar to OpenGL ES than I had realized, so getting it running
+was actually fairly easy. Probably the biggest hurdle was that I didnt realize
+that depth testing was disabled by default, and it took a while to realize that
+that was what was causing weird distortions. Thought for a while that I set the
+mesh indicies wrong or something.
 
-The primary cell types involved are:
-Grass (Light Green)
-Forest (Dark Green)
-Civilization (Gold)
+I used a few npm packages, notably `glMatrix`, `camera-picking-ray`, and `perspective-camera`
+for camera management, as well as `perlin-noise` to generate noise for the ground.
 
-Additional types are:
-Dirt (Light Brown)
-Rock (Grey)
-Fauna (Dark Brown)
-Water (Blue)
-Wall (Black)
-Growth (Mid Green)
+The cell types stayed the same, but I changed the behavior of Fauna and Water to
+account for the varying elevation. One thing I never liked about Fauna in my
+first project was that once they were created, they would just spread everywhere
+and dominate the whole map. They are now locked into lower elevations, which
+caused them to just fill valleys, which I think looks much nicer, and allows the
+rest of the map to stay pretty dynamic while they're around.
+Water now flows downhill, and will dry out into grass at higher elevations. This
+creates much nicer looking ponds or basins or whatever.
 
-While the exact rules which govern the cells' interactions are fairly complex,
-the basic interactions are meant to go as follows:
+I still do not allow the user to place Fauna directly, as I prefer it to be an
+emergent element, less controllable by the user. And the Growth cell type is meant
+just as an part of Tree cell's growth, to slow it down a bit with an intermittent
+step, so the ability to place it seemed unneeded.
 
-Grass and Forest spread across dirt and stone and are self-sustainable.
-If undeterred, they will cover the entire map. These exhibit unrelenting growth.
+I have the background color change with the simulation speed to give the user
+a visual idea of when they've reached the minimum or maximum speed, without
+having to show a number. It also feels fitting to me for a bright background to
+mean high activity, and for a darker background to indicate a calmer, slower
+simulation.
 
-Civilization will spread across Grass and Forest, but turn nearby Grass
-into Dirt and turn into Rock when there is not enough plant life near them to survive.
-This causes them to leave Rocks in their wake in regular patterns, unlike the
-organic appearance of everything else. This cell type is destructive and not self-sustainable.
+For mouse input, I didn't want to have to worry the height of the actual cells
+and do any actual raycasting checking if they're in the path of the mouse or not,
+so instead I just used a ray from the mouse down to a plane at Z = 0 (the max
+height the cells can be) and use the X,Y intersection to figure out where on the
+grid it should be. At first I rendered a cell at that location to debug and
+make sure the math was checking out, but I found that that was a pretty good
+visual aid and left it in, making its color change based on what cell type
+was selected.
 
-Water will flow down and to the right and will not wrap around the screen, making
-it the only cell type to prefer a certain direction over another, allowing
-creeks or bays to be created. Since water is a source of life, it turns
-dirt into grass, and when it comes in contact with the edge of a growing forest
-(where the Growth cells are spawned, specifically), can spawn Fauna.
-
-While Grass/Forest is meant to symbolize growth and Civilization is self-destructive,
-Fauna is meant to be represent stability. It is still vulnerable to Civilization's
-spread, but is self-sustaining and can stay present indefinitely in a field, body
-of water, or forest. It additionally suspends the spread of Forests.
-Fauna cells live and die rapidly as well, giving a sense of constant motion.
-
-Wall cells do not have a symbolic representation, and have been included only for
-fun. They will never change, and can be used to section areas off. They were given
-a strong color of absolute black to show that it is a sort of meta cell type.
-
-UI was made minimal with no typography to go along with the abstract minimal visual
-style which cellular automata already possesses by nature. While without this guide
-it may be initially unclear what the cell types are, I'm hoping they are intuitive
-enough to prevent too much confusion.
-
-The initial state of the cell map was chosen because when uninterrupted, it immediately
-shows viewers the destructive nature of Civilization cells, as well as the growth
-of Forest cells. It also immediately leaves very inorganic patterns of rock behind
-the Civilization, hopefully hinting at the nature of the cells without needing words
-
-A light grey background was chosen to keep the spotlight on the grid itself, while
-giving some contrast to the Wall cells.
+I also removed the UI and now just use buttons to change settings, which I
+personally prefer, though I guess just having text at the bottom saying
+what the controls are isn't too elegant.

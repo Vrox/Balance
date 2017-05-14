@@ -1006,8 +1006,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
             //console.log(t);
 
-            var hoverGridX = Math.floor(rayOrigin[0] + t * rayDir[0]);
-            var hoverGridY = Math.floor(rayOrigin[1] + t * rayDir[1]);
+            var hoverGridX = Math.floor(rayOrigin[0] + t * rayDir[0] + .5);
+            var hoverGridY = Math.floor(rayOrigin[1] + t * rayDir[1] + .5);
 
             worldMap.highlightLoc = {
                 x: hoverGridX,
@@ -1016,7 +1016,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
             debugModelMat[12] = hoverGridX;
             debugModelMat[13] = hoverGridY;
-            debugModelMat[14] = planeZ;
+            debugModelMat[14] = planeZ - 2;
 
             //console.log(worldMap.highlightLoc);
         }
@@ -8884,7 +8884,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }
     }, { "gl-vec3/cross": 31, "gl-vec3/dot": 32, "gl-vec3/subtract": 38 }], 52: [function (require, module, exports) {
         module.exports = function parse(params) {
-            var template = "precision mediump float; \n" + " \n" + "uniform vec4 u_color; \n" + "varying float v_depth; \n" + " \n" + "void main() { \n" + "  float d = 1.0 - v_depth/10.; \n" + "  gl_FragColor = u_color * d * d; \n" + "//  gl_FragColor = vec4(0, 1, 1, 1); \n" + "} \n" + " \n";
+            var template = "precision mediump float; \n" + " \n" + "uniform vec4 u_color; \n" + "varying float v_depth; \n" + " \n" + "void main() { \n" + "  float d = 1.0 - v_depth/10.; \n" + "  gl_FragColor = u_color * d * d; \n" + "} \n" + " \n";
             params = params || {};
             for (var key in params) {
                 var matcher = new RegExp("{{" + key + "}}", "g");

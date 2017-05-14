@@ -196,8 +196,8 @@ function tick(dt) {
 
   //console.log(t);
 
-  const hoverGridX = Math.floor(rayOrigin[0] + t * rayDir[0]);
-  const hoverGridY = Math.floor(rayOrigin[1] + t * rayDir[1]);
+  const hoverGridX = Math.floor(rayOrigin[0] + t * rayDir[0] +.5);
+  const hoverGridY = Math.floor(rayOrigin[1] + t * rayDir[1] +.5);
 
   worldMap.highlightLoc = {
     x: hoverGridX,
@@ -206,7 +206,7 @@ function tick(dt) {
 
   debugModelMat[12] = hoverGridX;
   debugModelMat[13] = hoverGridY;
-  debugModelMat[14] = planeZ;
+  debugModelMat[14] = planeZ - 2;
 
   //console.log(worldMap.highlightLoc);
 
